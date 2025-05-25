@@ -93,7 +93,19 @@ else
 fi
 
 # Create the container
-pct create $CONTAINER_ID $TEMPLATE_STORAGE:vztmpl/$TEMPLATE \
+# If TEMPLATE_FULL already contains the full path (local:vztmpl/...), use it directly
+# Otherwise, construct the path
+if [[ "$TEMPLATE_FULL" == *":"* ]]; then
+    # Template already has storage prefix
+    TEMPLATE_PATH="$TEMPLATE_FULL"
+else
+    # Need to add storage prefix
+    TEMPLATE_PATH="$TEMPLATE_STORAGE:vztmpl/$TEMPLATE"
+fi
+
+echo -e "${YELLOW}Using template: $TEMPLATE_PATH${NC}"
+
+pct create $CONTAINER_ID "$TEMPLATE_PATH" \
     --hostname $CONTAINER_NAME \
     --memory $CONTAINER_RAM \
     --swap $CONTAINER_SWAP \
