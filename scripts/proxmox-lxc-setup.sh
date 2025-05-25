@@ -58,8 +58,11 @@ else
     echo -e "${GREEN}Ubuntu 22.04 template already exists${NC}"
 fi
 
-# Get template path
-TEMPLATE=$(pveam list $TEMPLATE_STORAGE | grep "ubuntu-22.04-standard" | awk '{print $1}')
+# Get template filename only (without the storage prefix)
+# pveam list output format: STORAGE:vztmpl/TEMPLATE_NAME
+TEMPLATE_FULL=$(pveam list $TEMPLATE_STORAGE | grep "ubuntu-22.04-standard" | awk '{print $1}')
+# Extract just the filename part after the last /
+TEMPLATE=$(echo $TEMPLATE_FULL | sed 's/.*\///')
 
 # Check if container already exists
 if pct status $CONTAINER_ID &>/dev/null; then
