@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Extraction {
+  id          String   @id @default(cuid())
+  sourceUrl   String
+  videoCount  Int
+  videos      String   // JSON string of video URLs
+  userIp      String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  
+  @@index([createdAt])
+  @@index([userIp])
+}
+
+model Analytics {
+  id          String   @id @default(cuid())
+  event       String   // "extraction", "download", "page_view"
+  data        String?  // JSON data
+  userIp      String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  
+  @@index([event])
+  @@index([createdAt])
+}
+
+model RateLimit {
+  id          String   @id @default(cuid())
+  identifier  String   @unique // IP address or user ID
+  count       Int      @default(0)
+  window      DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([identifier, window])
+}
