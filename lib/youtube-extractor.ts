@@ -1,4 +1,13 @@
-import { VideoInfo } from '@/types/video'
+interface VideoInfo {
+  url: string
+  type: string
+  format?: string
+  quality?: string
+  title?: string
+  hasAudio?: boolean
+  isHLS?: boolean
+  downloadInstructions?: string
+}
 
 interface YouTubeVideoInfo {
   videoId: string
@@ -116,13 +125,31 @@ async function extractWithYtDlp(url: string): Promise<VideoInfo[]> {
         const hasVideo = format.vcodec !== 'none'
         const hasAudio = format.acodec !== 'none'
         
-        // Skip audio-only formats for now
-        if (!hasVideo) continue
+        // Skip audio-only formats unless specifically needed
+        if (!hasVideo && hasAudio) {
+          // Store audio-only format for potential merging
+          continue
+        }
         
         const qualityLabel = format.format_note || `${height}p` || 'unknown'
         
-        // Prefer formats with both audio and video
-        if (hasAudio || !qualityGroups.has(qualityLabel)) {
+        // Skip HLS formats if we have better options
+        const isHLS = format.url.includes('.m3u8') || format.url.includes('/manifest/hls')
+        
+        // Get existing format for this quality
+        const existing = qualityGroups.get(qualityLabel)
+        
+        // Prefer formats in this order:
+        // 1. Non-HLS with audio
+        // 2. Non-HLS without audio  
+        // 3. HLS with audio
+        // 4. HLS without audio
+        const shouldReplace = !existing || 
+          (!existing.hasAudio && hasAudio) || // New has audio, old doesn't
+          (existing.isHLS && !isHLS) || // New is not HLS, old is
+          (existing.isHLS && !isHLS && hasAudio) // New is not HLS with audio
+        
+        if (shouldReplace) {
           qualityGroups.set(qualityLabel, {
             url: format.url,
             quality: qualityLabel,
@@ -131,7 +158,8 @@ async function extractWithYtDlp(url: string): Promise<VideoInfo[]> {
             hasAudio,
             hasVideo,
             height,
-            formatId: format.format_id
+            formatId: format.format_id,
+            isHLS
           })
         }
       }
@@ -142,10 +170,14 @@ async function extractWithYtDlp(url: string): Promise<VideoInfo[]> {
       
       console.log(`Grouped into ${qualityGroups.size} quality levels`)
       
+      // Log format selection for debugging
+      qualityGroups.forEach((format, quality) => {
+        console.log(`Quality ${quality}: ${format.isHLS ? 'HLS' : 'Direct'}, Audio: ${format.hasAudio}, Format ID: ${format.formatId}`)
+      })
+      
       for (const [quality, format] of sortedQualities) {
-        // Check if it's an HLS stream
-        const isHLS = format.url.includes('.m3u8') || format.url.includes('/manifest/hls')
-        const actualFormat = isHLS ? 'm3u8' : (format.ext || 'mp4')
+        // Use the isHLS flag we already determined
+        const actualFormat = format.isHLS ? 'm3u8' : (format.ext || 'mp4')
         
         videos.push({
           url: format.url,
@@ -155,9 +187,11 @@ async function extractWithYtDlp(url: string): Promise<VideoInfo[]> {
           title: data.title || 'YouTube Video',
           size: format.filesize,
           hasAudio: format.hasAudio,
-          isHLS: isHLS,
-          downloadInstructions: isHLS 
-            ? 'This is an HLS stream. Use the download options below.'
+          isHLS: format.isHLS,
+          downloadInstructions: format.isHLS 
+            ? (format.hasAudio 
+              ? 'HLS stream with audio. Use the download options below.'
+              : '⚠️ HLS stream (video only). For audio, use a non-HLS format.')
             : (format.hasAudio 
               ? 'Click to download video with audio' 
               : 'Video only - no audio track')

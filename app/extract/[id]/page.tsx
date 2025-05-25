@@ -134,7 +134,7 @@ export default function ExtractResultPage() {
           return (
             <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-semibold rounded">
                       {extension}
@@ -145,7 +145,7 @@ export default function ExtractResultPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 truncate mb-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 break-all mb-3">
                     {video.url}
                   </p>
                   {(video.isHLS || video.format === 'm3u8') && (
@@ -157,7 +157,11 @@ export default function ExtractResultPage() {
                         </p>
                       </div>
                       
-                      <HLSDownloader url={video.url} quality={video.quality} />
+                      <HLSDownloader 
+                        url={video.url} 
+                        quality={video.quality}
+                        sourceUrl={result.sourceUrl}
+                      />
                       
                       <details className="text-xs">
                         <summary className="cursor-pointer text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
@@ -171,7 +175,7 @@ export default function ExtractResultPage() {
                   )}
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => copyToClipboard(video.url)}
                     className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"

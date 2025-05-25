@@ -6,9 +6,10 @@ import { Download, Loader2, AlertCircle, FileVideo } from 'lucide-react'
 interface HLSDownloaderProps {
   url: string
   quality?: string
+  sourceUrl?: string  // Original page URL (e.g. YouTube URL)
 }
 
-export default function HLSDownloader({ url, quality }: HLSDownloaderProps) {
+export default function HLSDownloader({ url, quality, sourceUrl }: HLSDownloaderProps) {
   const [downloading, setDownloading] = useState(false)
   const [converting, setConverting] = useState(false)
   const [error, setError] = useState('')
@@ -26,7 +27,7 @@ export default function HLSDownloader({ url, quality }: HLSDownloaderProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, sourceUrl }),
       })
 
       if (!response.ok) {
@@ -76,13 +77,15 @@ export default function HLSDownloader({ url, quality }: HLSDownloaderProps) {
     setError('')
 
     try {
+      console.log('Sending conversion request:', { url, sourceUrl })
+      
       // Use the conversion endpoint
       const response = await fetch('/api/convert/hls-to-mp4', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, sourceUrl }),
       })
 
       if (!response.ok) {
@@ -163,6 +166,16 @@ export default function HLSDownloader({ url, quality }: HLSDownloaderProps) {
       <p className="text-xs text-gray-500 dark:text-gray-400">
         Quick: Downloads raw stream (.ts) | MP4: Converts on server (requires ffmpeg)
       </p>
+      
+      {url.includes('googlevideo.com') && (
+        <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 space-y-1">
+          <p>⚠️ YouTube HLS streams may not work with quick download. Use the convert option instead.</p>
+          <p>💡 The MP4 conversion will automatically merge video and audio streams for you.</p>
+          {sourceUrl && sourceUrl.includes('youtube.com') && (
+            <p className="text-green-600 dark:text-green-400">✅ Original YouTube URL detected - conversion will use higher quality source!</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

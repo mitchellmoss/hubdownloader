@@ -5,12 +5,13 @@ import { tmpdir } from 'os'
 import { randomBytes } from 'crypto'
 
 interface HLSDownloadOptions {
-  url: string
+  url: string  // Primary URL to try (could be sourceUrl or HLS URL)
+  hlsUrl?: string  // Fallback HLS URL if primary fails
   onProgress?: (percent: number, message: string) => void
 }
 
 export async function downloadHLSToMP4(options: HLSDownloadOptions): Promise<string> {
-  const { url, onProgress } = options
+  const { url, hlsUrl, onProgress } = options
   const tempDir = join(tmpdir(), `hls_${randomBytes(8).toString('hex')}`)
   const outputFile = join(tempDir, 'output.mp4')
   
@@ -25,13 +26,22 @@ export async function downloadHLSToMP4(options: HLSDownloadOptions): Promise<str
     
     if (ytdlpPath) {
       console.log('Using yt-dlp for HLS download...')
+      // Try with primary URL first (might be original YouTube URL)
       const result = await downloadWithYtDlp(ytdlpPath, url, outputFile, onProgress)
       if (result) return outputFile
+      
+      // If we have a different HLS URL, try that too
+      if (hlsUrl && hlsUrl !== url) {
+        console.log('Primary URL failed, trying HLS URL with yt-dlp...')
+        const hlsResult = await downloadWithYtDlp(ytdlpPath, hlsUrl, outputFile, onProgress)
+        if (hlsResult) return outputFile
+      }
     }
     
     // Fallback to ffmpeg with segment retry logic
     console.log('Falling back to ffmpeg...')
-    await downloadWithFFmpeg(url, outputFile, tempDir, onProgress)
+    // Use HLS URL for ffmpeg since it doesn't understand YouTube URLs
+    await downloadWithFFmpeg(hlsUrl || url, outputFile, tempDir, onProgress)
     
     return outputFile
   } catch (error) {
@@ -76,11 +86,25 @@ async function downloadWithYtDlp(
   onProgress?: (percent: number, message: string) => void
 ): Promise<boolean> {
   return new Promise((resolve) => {
+    console.log(`yt-dlp: Processing URL: ${url}`)
+    
+    // Determine appropriate referer based on URL
+    let referer = 'https://www.youtube.com/'
+    if (url.includes('pornhub.com')) {
+      referer = 'https://www.pornhub.com/'
+    } else if (url.includes('xvideos.com')) {
+      referer = 'https://www.xvideos.com/'
+    } else if (url.includes('xhamster.com')) {
+      referer = 'https://xhamster.com/'
+    }
+    
     const args = [
-      '-f', 'best',
+      // Format selection: prefer best quality with both video and audio
+      '-f', 'bestvideo+bestaudio/best',
+      '--merge-output-format', 'mp4',
       '--no-check-certificate',
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      '--referer', 'https://www.pornhub.com/',
+      '--referer', referer,
       '--concurrent-fragments', '4',
       '--retries', '10',
       '--fragment-retries', '10',
@@ -171,7 +195,8 @@ async function downloadWithFFmpeg(
     '-reconnect_streamed', '1',
     '-reconnect_delay_max', '2',
     '-i', url,
-    '-c', 'copy',
+    '-c:v', 'copy',
+    '-c:a', 'copy',
     '-bsf:a', 'aac_adtstoasc',
     '-movflags', 'faststart',
     '-max_muxing_queue_size', '9999',
