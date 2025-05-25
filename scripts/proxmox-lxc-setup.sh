@@ -58,11 +58,9 @@ else
     echo -e "${GREEN}Ubuntu 22.04 template already exists${NC}"
 fi
 
-# Get template filename only (without the storage prefix)
+# Get template path from pveam list
 # pveam list output format: STORAGE:vztmpl/TEMPLATE_NAME
-TEMPLATE_FULL=$(pveam list $TEMPLATE_STORAGE | grep "ubuntu-22.04-standard" | awk '{print $1}')
-# Extract just the filename part after the last /
-TEMPLATE=$(echo $TEMPLATE_FULL | sed 's/.*\///')
+TEMPLATE_PATH=$(pveam list $TEMPLATE_STORAGE | grep "ubuntu-22.04-standard" | awk '{print $1}')
 
 # Check if container already exists
 if pct status $CONTAINER_ID &>/dev/null; then
@@ -93,16 +91,6 @@ else
 fi
 
 # Create the container
-# If TEMPLATE_FULL already contains the full path (local:vztmpl/...), use it directly
-# Otherwise, construct the path
-if [[ "$TEMPLATE_FULL" == *":"* ]]; then
-    # Template already has storage prefix
-    TEMPLATE_PATH="$TEMPLATE_FULL"
-else
-    # Need to add storage prefix
-    TEMPLATE_PATH="$TEMPLATE_STORAGE:vztmpl/$TEMPLATE"
-fi
-
 echo -e "${YELLOW}Using template: $TEMPLATE_PATH${NC}"
 
 pct create $CONTAINER_ID "$TEMPLATE_PATH" \
