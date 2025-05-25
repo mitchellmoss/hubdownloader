@@ -4,7 +4,7 @@ import { extractVideoUrls } from '@/lib/puppeteer'
 import { simpleExtractVideoUrls } from '@/lib/simple-extractor'
 import { extractAdultVideoUrls } from '@/lib/adult-extractor'
 import { extractYouTubeVideo } from '@/lib/youtube-extractor'
-import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit-middleware'
+import { checkRateLimit, createRateLimitResponse } from '@/lib/simple-rate-limit'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
 
@@ -27,10 +27,13 @@ const extractSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Check rate limit
-    const rateLimitResponse = await rateLimitMiddleware(request, RATE_LIMIT_CONFIGS.extraction)
-    if (rateLimitResponse) {
-      return rateLimitResponse
+    // Check rate limit (10 requests per minute)
+    const rateLimit = await checkRateLimit(request, 10, 60000)
+    if (!rateLimit.allowed) {
+      return createRateLimitResponse(
+        'Too many extraction requests. Please wait before trying again.',
+        rateLimit.resetAt
+      )
     }
     
     const body = await request.json()
