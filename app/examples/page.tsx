@@ -26,6 +26,15 @@ export default function ExamplesPage() {
       ]
     },
     {
+      category: "Adult Sites (18+)",
+      sites: [
+        "PornHub video pages",
+        "Basic adult video sites",
+        "Sites without heavy DRM",
+        "Direct video hosting"
+      ]
+    },
+    {
       category: "Won't Work",
       sites: [
         "YouTube (protected)",

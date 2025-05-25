@@ -96,13 +96,35 @@ export async function extractVideoUrls(url: string): Promise<VideoInfo[]> {
       const resourceType = request.resourceType()
       const requestUrl = request.url()
       
+      // Filter out ads, analytics, and non-video URLs
+      const excludePatterns = [
+        /\/ads?[\/?]/i,
+        /\/analytics/i,
+        /\/track/i,
+        /\/pixel/i,
+        /google-analytics/i,
+        /doubleclick/i,
+        /facebook\.com/i,
+        /twitter\.com/i,
+        /_xa\/ads/i,
+        /etahub\.com/i,
+        /trafficjunky/i,
+        /\/events\?/i,
+        /\/collect\?/i,
+        /camsoda\.com/i,
+        /nsimg\.net/i,
+      ]
+      
+      const shouldExclude = excludePatterns.some(pattern => pattern.test(requestUrl))
+      
       // Check for video resources
       const videoExtensions = /\.(mp4|webm|m3u8|mpd|avi|mov|mkv|flv|ts|m4s)/i
       const videoKeywords = /(video|stream|media|playlist\.m3u8|manifest\.mpd|\.mp4\?|\.webm\?)/i
       
-      if (resourceType === 'media' || 
+      if (!shouldExclude &&
+          (resourceType === 'media' || 
           ((resourceType === 'xhr' || resourceType === 'fetch' || resourceType === 'other') && 
-           (requestUrl.match(videoExtensions) || requestUrl.match(videoKeywords)))) {
+           (requestUrl.match(videoExtensions) || requestUrl.match(videoKeywords))))) {
         
         if (!seenUrls.has(requestUrl)) {
           seenUrls.add(requestUrl)

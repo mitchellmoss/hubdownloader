@@ -1,0 +1,4 @@
+youtube-dl
+yt-dlp
+requests
+beautifulsoup4

@@ -18,6 +18,9 @@ export default function Header() {
             <Link href="/how-to" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
               How To
             </Link>
+            <Link href="/hls-guide" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+              HLS Guide
+            </Link>
             <Link href="/faq" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
               FAQ
             </Link>

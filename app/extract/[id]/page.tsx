@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Copy, Download, ExternalLink, Loader2, AlertCircle } from 'lucide-react'
 import AdUnit from '@/components/AdUnit'
+import HLSDownloader from '@/components/HLSDownloader'
 
 interface VideoResult {
   url: string
@@ -11,6 +12,8 @@ interface VideoResult {
   quality?: string
   format?: string
   size?: string
+  isHLS?: boolean
+  downloadInstructions?: string
 }
 
 interface ExtractionResult {
@@ -133,6 +136,27 @@ export default function ExtractResultPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400 truncate mb-3">
                     {video.url}
                   </p>
+                  {video.isHLS && (
+                    <div className="mt-2 space-y-3">
+                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded text-xs">
+                        <p className="font-semibold text-yellow-800 dark:text-yellow-200">HLS Stream</p>
+                        <p className="text-yellow-700 dark:text-yellow-300 mt-1">
+                          {video.downloadInstructions || 'Use the download button below or yt-dlp'}
+                        </p>
+                      </div>
+                      
+                      <HLSDownloader url={video.url} quality={video.quality} />
+                      
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
+                          Alternative: Use yt-dlp
+                        </summary>
+                        <code className="block mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded">
+                          yt-dlp "{video.url}"
+                        </code>
+                      </details>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -153,8 +177,7 @@ export default function ExtractResultPage() {
                     <ExternalLink className="w-5 h-5" />
                   </a>
                   <a
-                    href={video.url}
-                    download
+                    href={`/api/download/direct?url=${encodeURIComponent(video.url)}`}
                     className="p-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
                     title="Download"
                   >
@@ -181,6 +204,14 @@ export default function ExtractResultPage() {
           <li>If download doesn't start, right-click the link and select "Save As"</li>
           <li>For HLS/DASH streams, use a compatible player or downloader</li>
         </ol>
+        {result.videos.some(v => v.isHLS || v.format === 'm3u8') && (
+          <a 
+            href="/hls-guide" 
+            className="inline-block mt-3 text-blue-600 hover:text-blue-700 underline font-semibold"
+          >
+            📖 Complete Guide for Downloading HLS Streams
+          </a>
+        )}
       </div>
 
       {/* Bottom Ad */}

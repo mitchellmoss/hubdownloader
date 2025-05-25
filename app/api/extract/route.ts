@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 import { extractVideoUrls } from '@/lib/puppeteer'
 import { simpleExtractVideoUrls } from '@/lib/simple-extractor'
+import { extractAdultVideoUrls } from '@/lib/adult-extractor'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
@@ -44,12 +45,35 @@ export async function POST(request: NextRequest) {
     
     // Extract video URLs
     let videos
-    try {
-      videos = await extractVideoUrls(url)
-    } catch (mainError) {
-      console.error('Main extractor failed, trying simple extractor:', mainError)
-      // Fallback to simple extractor
-      videos = await simpleExtractVideoUrls(url)
+    
+    // Check if it's an adult site URL
+    const isAdultSite = url.includes('pornhub.com') || 
+                       url.includes('xvideos.com') || 
+                       url.includes('xhamster.com')
+    
+    if (isAdultSite) {
+      console.log('Detected adult site, using specialized extractor')
+      videos = await extractAdultVideoUrls(url)
+      
+      // If adult extractor fails, try main extractor
+      if (!videos || videos.length === 0) {
+        console.log('Adult extractor returned no results, trying main extractor')
+        try {
+          videos = await extractVideoUrls(url)
+        } catch (error) {
+          console.error('Main extractor also failed:', error)
+          videos = []
+        }
+      }
+    } else {
+      // For non-adult sites, use regular extractors
+      try {
+        videos = await extractVideoUrls(url)
+      } catch (mainError) {
+        console.error('Main extractor failed, trying simple extractor:', mainError)
+        // Fallback to simple extractor
+        videos = await simpleExtractVideoUrls(url)
+      }
     }
     
     // Get request metadata
