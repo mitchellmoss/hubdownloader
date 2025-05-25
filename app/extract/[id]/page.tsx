@@ -154,7 +154,7 @@ export default function ExtractResultPage() {
                       <p className="font-semibold text-green-800 dark:text-green-200">Direct Video File</p>
                       <p className="text-green-700 dark:text-green-300 mt-1">
                         Click the download button to save this video directly to your device.
-                        If the download doesn't start, right-click and select "Save link as..."
+                        If the download doesn't start, right-click on the download button and select "Save link as..."
                       </p>
                     </div>
                   )}
@@ -245,7 +245,7 @@ export default function ExtractResultPage() {
             <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-100 mb-1">For Direct Video Files (MP4, WebM, etc.):</h4>
             <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside ml-4">
               <li>Click the blue download button to save the video</li>
-              <li>If the download doesn't start automatically, right-click and select "Save link as..."</li>
+              <li>If the download doesn't start automatically, right-click on the download button and select "Save link as..."</li>
               <li>The video will be saved directly to your Downloads folder</li>
             </ol>
           </div>
