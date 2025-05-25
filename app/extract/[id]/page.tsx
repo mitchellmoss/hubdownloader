@@ -148,6 +148,16 @@ export default function ExtractResultPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400 break-all mb-3">
                     {video.url}
                   </p>
+                  {/* Direct video file instructions */}
+                  {!video.isHLS && video.format !== 'm3u8' && video.format !== 'mpd' && (
+                    <div className="mt-2 p-2 bg-green-100 dark:bg-green-900/20 rounded text-xs">
+                      <p className="font-semibold text-green-800 dark:text-green-200">Direct Video File</p>
+                      <p className="text-green-700 dark:text-green-300 mt-1">
+                        Click the download button to save this video directly to your device.
+                        If the download doesn't start, right-click and select "Save link as..."
+                      </p>
+                    </div>
+                  )}
                   {(video.isHLS || video.format === 'm3u8') && (
                     <div className="mt-2 space-y-3">
                       <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded text-xs">
@@ -195,9 +205,18 @@ export default function ExtractResultPage() {
                         <ExternalLink className="w-5 h-5" />
                       </a>
                       <a
-                        href={`/api/download/direct?url=${encodeURIComponent(video.url)}`}
+                        href={video.url}
+                        download
                         className="p-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
                         title="Download"
+                        onClick={(e) => {
+                          // For direct video files, let browser handle the download
+                          // For HLS/DASH, we might need special handling
+                          if (video.isHLS || video.format === 'm3u8' || video.format === 'mpd') {
+                            e.preventDefault()
+                            window.open(video.url, '_blank')
+                          }
+                        }}
                       >
                         <Download className="w-5 h-5" />
                       </a>
@@ -219,11 +238,31 @@ export default function ExtractResultPage() {
       {/* Instructions */}
       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 mb-8">
         <h3 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">How to Download:</h3>
-        <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
-          <li>Click the download button or copy the URL</li>
-          <li>If download doesn't start, right-click the link and select "Save As"</li>
-          <li>For HLS/DASH streams, use a compatible player or downloader</li>
-        </ol>
+        
+        {/* Check if we have direct video files */}
+        {result.videos.some(v => !v.isHLS && v.format !== 'm3u8' && v.format !== 'mpd') && (
+          <div className="mb-4">
+            <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-100 mb-1">For Direct Video Files (MP4, WebM, etc.):</h4>
+            <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside ml-4">
+              <li>Click the blue download button to save the video</li>
+              <li>If the download doesn't start automatically, right-click and select "Save link as..."</li>
+              <li>The video will be saved directly to your Downloads folder</li>
+            </ol>
+          </div>
+        )}
+        
+        {/* Check if we have streaming formats */}
+        {result.videos.some(v => v.isHLS || v.format === 'm3u8' || v.format === 'mpd') && (
+          <div>
+            <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-100 mb-1">For Streaming Formats (HLS/DASH):</h4>
+            <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside ml-4">
+              <li>Use the built-in downloader for HLS streams</li>
+              <li>Or copy the URL and use yt-dlp or similar tools</li>
+              <li>These formats require special handling for best results</li>
+            </ol>
+          </div>
+        )}
+        
         {result.videos.some(v => v.isHLS || v.format === 'm3u8') && (
           <a 
             href="/hls-guide" 

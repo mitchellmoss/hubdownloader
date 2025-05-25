@@ -125,6 +125,14 @@ GET /api/history - Get user's extraction history
   - Debug logging in development
   - **Long URL handling** with proper text wrapping
   
+- **Direct Video Downloads**
+  - Native browser download for direct video files (MP4, WebM, AVI, MOV, etc.)
+  - Automatic filename detection from URL
+  - Proper content-type headers for all video formats
+  - Fallback proxy endpoint for CORS-restricted videos
+  - Format-specific instructions for users
+  - **Context-aware download buttons** - direct download for video files, special handling for streams
+  
 ### Specialized Extractors
 1. **YouTube Extractor** (`lib/youtube-extractor.ts`)
    - Attempts yt-dlp first for best results
@@ -245,6 +253,13 @@ npm start
 - **Format Selection**: Adult sites use `best/bestvideo+bestaudio` format selector for better compatibility
 - **Headers**: Proper referer headers are set automatically based on the site
 - **Best Practice**: Always install yt-dlp for best results with adult sites
+
+### Direct Video Downloads
+- Direct video files (MP4, WebM, etc.) use the browser's native download functionality
+- Download button automatically triggers download with proper filename
+- Falls back to opening in new tab for problematic formats
+- Proxy endpoint available at `/api/download/direct` for CORS-restricted videos
+- Automatic referer headers for adult sites (PornHub, xVideos, xHamster)
 
 ### Development Notes
 - Run with `npm run dev` for hot reload
