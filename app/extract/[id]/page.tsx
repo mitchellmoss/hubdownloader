@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { Copy, Download, ExternalLink, Loader2, AlertCircle } from 'lucide-react'
 import AdUnit from '@/components/AdUnit'
 import HLSDownloader from '@/components/HLSDownloader'
+import YouTubeDownloader from '@/components/YouTubeDownloader'
 
 interface VideoResult {
   url: string
@@ -12,6 +13,8 @@ interface VideoResult {
   quality?: string
   format?: string
   size?: string
+  title?: string
+  hasAudio?: boolean
   isHLS?: boolean
   downloadInstructions?: string
 }
@@ -118,6 +121,15 @@ export default function ExtractResultPage() {
         {result.videos.map((video, index) => {
           const { filename, extension } = getVideoInfo(video)
           const isCopied = copiedUrl === video.url
+          
+          // Debug log
+          console.log('Video:', { 
+            url: video.url, 
+            type: video.type, 
+            isHLS: video.isHLS,
+            format: video.format,
+            condition: video.isHLS || video.format === 'm3u8'
+          })
 
           return (
             <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
@@ -136,7 +148,7 @@ export default function ExtractResultPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400 truncate mb-3">
                     {video.url}
                   </p>
-                  {video.isHLS && (
+                  {(video.isHLS || video.format === 'm3u8') && (
                     <div className="mt-2 space-y-3">
                       <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded text-xs">
                         <p className="font-semibold text-yellow-800 dark:text-yellow-200">HLS Stream</p>
@@ -167,22 +179,26 @@ export default function ExtractResultPage() {
                   >
                     <Copy className="w-5 h-5" />
                   </button>
-                  <a
-                    href={video.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                    title="Open in new tab"
-                  >
-                    <ExternalLink className="w-5 h-5" />
-                  </a>
-                  <a
-                    href={`/api/download/direct?url=${encodeURIComponent(video.url)}`}
-                    className="p-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
-                    title="Download"
-                  >
-                    <Download className="w-5 h-5" />
-                  </a>
+                  {video.type !== 'youtube' && (
+                    <>
+                      <a
+                        href={video.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        title="Open in new tab"
+                      >
+                        <ExternalLink className="w-5 h-5" />
+                      </a>
+                      <a
+                        href={`/api/download/direct?url=${encodeURIComponent(video.url)}`}
+                        className="p-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+                        title="Download"
+                      >
+                        <Download className="w-5 h-5" />
+                      </a>
+                    </>
+                  )}
                 </div>
               </div>
               

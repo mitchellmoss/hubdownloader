@@ -45,6 +45,9 @@ interface VideoInfo {
   type: string
   format?: string
   quality?: string
+  isHLS?: boolean
+  title?: string
+  downloadInstructions?: string
 }
 
 export async function extractVideoUrls(url: string): Promise<VideoInfo[]> {
@@ -113,6 +116,13 @@ export async function extractVideoUrls(url: string): Promise<VideoInfo[]> {
         /\/collect\?/i,
         /camsoda\.com/i,
         /nsimg\.net/i,
+        // YouTube specific excludes
+        /\/generate_204/i,
+        /\/api\/stats/i,
+        /\/qoe\?/i,
+        /\.svg$/i,
+        /ServiceLogin/i,
+        /\/s\/search\/audio\//i,
       ]
       
       const shouldExclude = excludePatterns.some(pattern => pattern.test(requestUrl))
@@ -131,10 +141,34 @@ export async function extractVideoUrls(url: string): Promise<VideoInfo[]> {
           
           const extension = requestUrl.match(/\.([a-zA-Z0-9]+)(?:\?|$)/)?.[1]
           
+          // Check if it's an HLS stream
+          const isHLS = extension?.toLowerCase() === 'm3u8' || requestUrl.includes('playlist/index.m3u8')
+          
+          // Try to extract quality from YouTube HLS URLs
+          let quality = undefined
+          if (requestUrl.includes('googlevideo.com') && requestUrl.includes('/itag/')) {
+            const itagMatch = requestUrl.match(/\/itag\/(\d+)/)
+            if (itagMatch) {
+              const itag = itagMatch[1]
+              // Map common YouTube itags to quality
+              const qualityMap: { [key: string]: string } = {
+                '269': '144p',
+                '230': '360p',
+                '232': '720p',
+                '270': '1080p',
+              }
+              quality = qualityMap[itag]
+            }
+          }
+          
           videoUrls.push({
             url: requestUrl,
             type: resourceType,
             format: extension?.toLowerCase(),
+            quality,
+            isHLS,
+            title: isHLS && requestUrl.includes('youtube') ? 'YouTube Video' : undefined,
+            downloadInstructions: isHLS ? 'This is an HLS stream. Use the download options below.' : undefined,
           })
         }
       }

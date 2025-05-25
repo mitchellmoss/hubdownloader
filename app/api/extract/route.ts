@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 import { extractVideoUrls } from '@/lib/puppeteer'
 import { simpleExtractVideoUrls } from '@/lib/simple-extractor'
 import { extractAdultVideoUrls } from '@/lib/adult-extractor'
+import { extractYouTubeVideo } from '@/lib/youtube-extractor'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
@@ -46,12 +47,34 @@ export async function POST(request: NextRequest) {
     // Extract video URLs
     let videos
     
+    // Check if it's YouTube
+    const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
+    
     // Check if it's an adult site URL
     const isAdultSite = url.includes('pornhub.com') || 
                        url.includes('xvideos.com') || 
                        url.includes('xhamster.com')
     
-    if (isAdultSite) {
+    if (isYouTube) {
+      console.log('Detected YouTube, using specialized extractor')
+      try {
+        videos = await extractYouTubeVideo(url)
+      } catch (error) {
+        console.error('YouTube extractor failed:', error)
+        videos = []
+      }
+      
+      // Always try main extractor for YouTube to catch HLS streams
+      if (!videos || videos.length === 0) {
+        console.log('YouTube extractor returned no results, using main extractor to find HLS streams')
+        try {
+          videos = await extractVideoUrls(url)
+        } catch (error) {
+          console.error('Main extractor also failed:', error)
+          videos = []
+        }
+      }
+    } else if (isAdultSite) {
       console.log('Detected adult site, using specialized extractor')
       videos = await extractAdultVideoUrls(url)
       
