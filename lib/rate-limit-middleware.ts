@@ -69,21 +69,21 @@ export async function rateLimitMiddleware(
       // Calculate retry after
       const retryAfter = Math.ceil((rateLimit.window.getTime() + windowMs - now.getTime()) / 1000)
       
-      return NextResponse.json(
+      const response = NextResponse.json(
         { 
           error: message,
           retryAfter 
         },
-        { 
-          status: 429,
-          headers: {
-            'Retry-After': retryAfter.toString(),
-            'X-RateLimit-Limit': maxRequests.toString(),
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': new Date(rateLimit.window.getTime() + windowMs).toISOString()
-          }
-        }
+        { status: 429 }
       )
+      
+      // Add rate limit headers
+      response.headers.set('Retry-After', retryAfter.toString())
+      response.headers.set('X-RateLimit-Limit', maxRequests.toString())
+      response.headers.set('X-RateLimit-Remaining', '0')
+      response.headers.set('X-RateLimit-Reset', new Date(rateLimit.window.getTime() + windowMs).toISOString())
+      
+      return response
     }
 
     // Increment count
