@@ -137,9 +137,15 @@ echo -e "${YELLOW}Installing dependencies in container...${NC}"
 pct exec $CONTAINER_ID -- bash -c "
 set -e
 
+# Fix locale issues
+export LC_ALL=C
+export DEBIAN_FRONTEND=noninteractive
+locale-gen en_US.UTF-8
+update-locale LANG=en_US.UTF-8
+
 # Update system
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+apt-get upgrade -y
 
 # Install required packages
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -157,8 +163,6 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
     lsb-release \
     software-properties-common \
     ffmpeg \
-    chromium-browser \
-    chromium-chromedriver \
     fonts-liberation \
     libasound2 \
     libatk-bridge2.0-0 \
@@ -188,6 +192,15 @@ npm install -g pm2
 
 # Install yt-dlp
 pip3 install --upgrade yt-dlp
+
+# Install Google Chrome (more reliable than Chromium snap in LXC)
+wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+apt-get update
+apt-get install -y google-chrome-stable
+
+# Set Chrome path for Puppeteer
+echo 'export PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable' >> /etc/environment
 
 # Create app user
 useradd -m -s /bin/bash appuser || true
