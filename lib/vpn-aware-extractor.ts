@@ -1,6 +1,6 @@
 import { extractVideoUrls } from './puppeteer'
 import { extractYouTubeVideo } from './youtube-extractor'
-import { extractAdultVideo } from './adult-extractor'
+import { extractAdultVideoUrls } from './adult-extractor'
 
 interface VPNStatus {
   isActive: boolean
@@ -63,7 +63,7 @@ export async function extractWithVPN(url: string) {
   // Try adult site extractors
   const adultDomains = ['pornhub.com', 'xvideos.com', 'xhamster.com']
   if (adultDomains.some(domain => url.includes(domain))) {
-    const videos = await extractAdultVideo(url)
+    const videos = await extractAdultVideoUrls(url)
     if (videos.length > 0) {
       return { videos, vpnStatus }
     }
