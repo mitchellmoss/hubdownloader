@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit-middleware'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Check rate limit for results endpoint
+  const rateLimitResponse = await rateLimitMiddleware(request, RATE_LIMIT_CONFIGS.results)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
   try {
     const extraction = await prisma.extraction.findUnique({
       where: { id: params.id }

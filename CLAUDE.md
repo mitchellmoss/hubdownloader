@@ -83,13 +83,19 @@ GET /api/history - Get user's extraction history
 6. **Response**: Return list of direct video URLs to client
 
 ### Security Considerations
-- Rate limiting per IP (10 requests/minute)
+- **Rate limiting per IP**:
+  - Extraction: 10 requests/minute
+  - HLS Conversion: 5 requests/minute (resource intensive)
+  - HLS Proxy: 30 requests/minute
+  - Direct Downloads: 20 requests/minute
+  - Results Viewing: 60 requests/minute
 - URL validation and sanitization
 - Timeout for page loading (30 seconds max)
 - Memory limits for headless browser
 - No execution of untrusted scripts
 - SQLite for analytics only (no sensitive data)
 - Regular browser instance recycling
+- Rate limit headers included in responses (X-RateLimit-*)
 
 ## Current Implementation Status
 

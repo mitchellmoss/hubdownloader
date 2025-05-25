@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit-middleware'
 
 const proxySchema = z.object({
   url: z.string().url(),
 })
 
 export async function POST(request: NextRequest) {
+  // Check rate limit for proxy endpoint
+  const rateLimitResponse = await rateLimitMiddleware(request, RATE_LIMIT_CONFIGS.proxy)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
   try {
     const body = await request.json()
     const { url } = proxySchema.parse(body)

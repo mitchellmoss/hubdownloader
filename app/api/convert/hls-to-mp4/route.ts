@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createReadStream } from 'fs'
 import { stat } from 'fs/promises'
 import { downloadHLSToMP4, cleanupHLSDownload } from '@/lib/hls-downloader'
+import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit-middleware'
 
 const convertSchema = z.object({
   url: z.string().url(),
@@ -11,6 +12,12 @@ const convertSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  // Check rate limit for conversion endpoint
+  const rateLimitResponse = await rateLimitMiddleware(request, RATE_LIMIT_CONFIGS.conversion)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
   let outputFile: string | null = null
   
   try {
