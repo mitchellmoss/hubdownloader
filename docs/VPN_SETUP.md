@@ -1,7 +1,7 @@
-# VPN Setup Guide for HubDownloader
+# VPN Setup Guide for Lyricless
 
 ## Overview
-This guide explains how to run HubDownloader through ExpressVPN using Docker, which will hide your server's real IP address from target websites.
+This guide explains how to run Lyricless through ExpressVPN using Docker, which will hide your server's real IP address from target websites.
 
 ## Prerequisites
 
@@ -73,7 +73,7 @@ EXPRESSVPN_COUNTRY=USA,UK,Netherlands,Switzerland
 ```
 Internet ← ExpressVPN Server ← Your Server (Hidden IP)
     ↓                              ↓
-Target Sites                  HubDownloader
+Target Sites                  Lyricless
     ↓                              ↓
 Video URLs ← ← ← ← ← ← ← ← ← Extracted Videos
 ```
@@ -98,7 +98,7 @@ docker-compose -f docker-compose.vpn.yml logs -f
 docker-compose -f docker-compose.vpn.yml logs -f vpn
 
 # App logs only
-docker-compose -f docker-compose.vpn.yml logs -f hubdownloader
+docker-compose -f docker-compose.vpn.yml logs -f lyricless
 ```
 
 ### Check Health
@@ -125,7 +125,7 @@ docker-compose -f docker-compose.vpn.yml ps
 3. Increase Docker resources:
    ```yaml
    services:
-     hubdownloader:
+     lyricless:
        deploy:
          resources:
            limits:
@@ -140,7 +140,7 @@ docker-compose -f docker-compose.vpn.yml ps
    ```
 2. Check for DNS leaks:
    ```bash
-   docker-compose -f docker-compose.vpn.yml exec hubdownloader curl https ::dnsleaktest.com/
+   docker-compose -f docker-compose.vpn.yml exec lyricless curl https ::dnsleaktest.com/
    ```
 
 ## Security Best Practices
@@ -232,5 +232,5 @@ For production with Cloudflare:
 ```bash
 # Run both
 docker-compose -f docker-compose.vpn.yml up -d
-cloudflared tunnel run hubdownloader
+cloudflared tunnel run lyricless
 ```

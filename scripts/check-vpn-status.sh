@@ -6,7 +6,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo "🔍 HubDownloader VPN Status Check"
+echo "🔍 Lyricless VPN Status Check"
 echo "================================="
 
 # Check if containers are running
@@ -16,8 +16,8 @@ if ! docker-compose -f docker-compose.vpn.yml ps | grep -q "vpn.*Up"; then
     exit 1
 fi
 
-if ! docker-compose -f docker-compose.vpn.yml ps | grep -q "hubdownloader.*Up"; then
-    echo -e "${YELLOW}⚠️  HubDownloader container is not running${NC}"
+if ! docker-compose -f docker-compose.vpn.yml ps | grep -q "lyricless.*Up"; then
+    echo -e "${YELLOW}⚠️  Lyricless container is not running${NC}"
 fi
 
 # Get IPs

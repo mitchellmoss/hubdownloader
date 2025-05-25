@@ -2,19 +2,19 @@ import { Metadata } from 'next'
 import AdUnit from '@/components/AdUnit'
 
 export const metadata: Metadata = {
-  title: 'FAQ - HubDownloader Video URL Extractor',
-  description: 'Frequently asked questions about using HubDownloader to extract and download videos from websites.',
+  title: 'FAQ - Lyricless Video URL Extractor',
+  description: 'Frequently asked questions about using Lyricless to extract and download videos from websites.',
 }
 
 export default function FAQPage() {
   const faqs = [
     {
-      question: "Is HubDownloader free to use?",
-      answer: "Yes, HubDownloader is completely free to use. We support the service through non-intrusive advertising."
+      question: "Is Lyricless free to use?",
+      answer: "Yes, Lyricless is completely free to use. We support the service through non-intrusive advertising."
     },
     {
-      question: "What websites does HubDownloader work with?",
-      answer: "HubDownloader works with most websites that host video content directly. However, it may not work with sites that use advanced DRM protection or require authentication."
+      question: "What websites does Lyricless work with?",
+      answer: "Lyricless works with most websites that host video content directly. However, it may not work with sites that use advanced DRM protection or require authentication."
     },
     {
       question: "Why can't I download videos from YouTube or Netflix?",

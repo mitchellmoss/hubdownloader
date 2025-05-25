@@ -1,4 +1,4 @@
-# HubDownloader - Video URL Extractor
+# Lyricless - Video URL Extractor
 
 A web application that extracts direct video URLs from websites without storing them on the server.
 
@@ -31,8 +31,8 @@ A web application that extracts direct video URLs from websites without storing 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/hubdownloader.git
-cd hubdownloader
+git clone https://github.com/yourusername/lyricless.git
+cd lyricless
 ```
 
 2. Install dependencies:
@@ -97,15 +97,15 @@ sudo apt-get install -y google-chrome-stable
 
 4. Clone and build the project:
 ```bash
-git clone https://github.com/yourusername/hubdownloader.git
-cd hubdownloader
+git clone https://github.com/yourusername/lyricless.git
+cd lyricless
 npm install
 npm run build
 ```
 
 5. Start with PM2:
 ```bash
-pm2 start npm --name "hubdownloader" -- start
+pm2 start npm --name "lyricless" -- start
 pm2 save
 pm2 startup
 ```

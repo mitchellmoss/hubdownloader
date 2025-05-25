@@ -3,7 +3,7 @@ version: '3.8'
 services:
   vpn:
     image: qmcgaw/gluetun
-    container_name: hubdownloader-vpn
+    container_name: lyricless-vpn
     cap_add:
       - NET_ADMIN
     devices:
@@ -38,7 +38,7 @@ services:
       # Logging
       - LOG_LEVEL=info
     ports:
-      # Expose HubDownloader through VPN
+      # Expose Lyricless through VPN
       - "3000:3000"  # Next.js app
       - "8888:8888"  # HTTP proxy (optional)
       - "1080:1080"  # SOCKS5 proxy (optional)
@@ -51,11 +51,11 @@ services:
       timeout: 10s
       retries: 3
 
-  hubdownloader:
+  lyricless:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: hubdownloader-app
+    container_name: lyricless-app
     network_mode: "service:vpn"  # Route ALL traffic through VPN
     depends_on:
       vpn:
@@ -87,7 +87,7 @@ services:
   # Optional: Proxy checker service
   ip-checker:
     image: curlimages/curl:latest
-    container_name: hubdownloader-ip-checker
+    container_name: lyricless-ip-checker
     network_mode: "service:vpn"
     depends_on:
       - vpn

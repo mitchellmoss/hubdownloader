@@ -1,7 +1,7 @@
-# Deploying HubDownloader on Proxmox LXC Container
+# Deploying Lyricless on Proxmox LXC Container
 
 ## Overview
-This guide walks through deploying HubDownloader with ExpressVPN protection on a Proxmox LXC (Linux Container).
+This guide walks through deploying Lyricless with ExpressVPN protection on a Proxmox LXC (Linux Container).
 
 ## Prerequisites
 - Proxmox VE 7.0+ installed
@@ -28,7 +28,7 @@ pveam download local ubuntu-22.04-standard_22.04-1_amd64.tar.zst
    - **General**:
      - Node: Select your node
      - CT ID: (e.g., 100)
-     - Hostname: `hubdownloader`
+     - Hostname: `lyricless`
      - Password: Set a strong password
    - **Template**:
      - Storage: local
@@ -138,13 +138,13 @@ sudo pip3 install yt-dlp
 sudo npm install -g pm2
 ```
 
-## Step 5: Clone and Configure HubDownloader
+## Step 5: Clone and Configure Lyricless
 
 ### 5.1 Clone Repository
 ```bash
 cd ~
-git clone https://github.com/mitchellmoss/hubdownloader.git
-cd hubdownloader
+git clone https://github.com/mitchellmoss/lyricless.git
+cd lyricless
 ```
 
 ### 5.2 Configure ExpressVPN
@@ -230,7 +230,7 @@ sudo apt install -y nginx certbot python3-certbot-nginx
 
 ### 8.2 Configure Nginx
 ```bash
-sudo nano /etc/nginx/sites-available/hubdownloader
+sudo nano /etc/nginx/sites-available/lyricless
 ```
 
 Add:
@@ -255,7 +255,7 @@ server {
 
 ### 8.3 Enable Site and SSL
 ```bash
-sudo ln -s /etc/nginx/sites-available/hubdownloader /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/lyricless /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 
@@ -268,20 +268,20 @@ sudo certbot --nginx -d yourdomain.com
 ### 9.1 Setup Container Auto-Start
 ```bash
 # Create systemd service
-sudo nano /etc/systemd/system/hubdownloader.service
+sudo nano /etc/systemd/system/lyricless.service
 ```
 
 Add:
 ```ini
 [Unit]
-Description=HubDownloader with VPN
+Description=Lyricless with VPN
 Requires=docker.service
 After=docker.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/home/hubuser/hubdownloader
+WorkingDirectory=/home/hubuser/lyricless
 ExecStart=/usr/bin/docker compose -f docker-compose.vpn.yml up -d
 ExecStop=/usr/bin/docker compose -f docker-compose.vpn.yml down
 User=hubuser
@@ -292,8 +292,8 @@ WantedBy=multi-user.target
 
 Enable service:
 ```bash
-sudo systemctl enable hubdownloader.service
-sudo systemctl start hubdownloader.service
+sudo systemctl enable lyricless.service
+sudo systemctl start lyricless.service
 ```
 
 ### 9.2 Setup Monitoring
@@ -302,12 +302,12 @@ sudo systemctl start hubdownloader.service
 sudo apt install -y htop iotop nethogs
 
 # Setup log rotation
-sudo nano /etc/logrotate.d/hubdownloader
+sudo nano /etc/logrotate.d/lyricless
 ```
 
 Add:
 ```
-/home/hubuser/hubdownloader/logs/*.log {
+/home/hubuser/lyricless/logs/*.log {
     daily
     rotate 7
     compress
@@ -320,22 +320,22 @@ Add:
 ### 9.3 Setup Backups
 ```bash
 # Create backup script
-nano ~/backup-hubdownloader.sh
+nano ~/backup-lyricless.sh
 ```
 
 Add:
 ```bash
 #!/bin/bash
-BACKUP_DIR="/backup/hubdownloader"
+BACKUP_DIR="/backup/lyricless"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 # Create backup directory
 mkdir -p $BACKUP_DIR
 
 # Backup database
-docker compose -f docker-compose.vpn.yml exec -T hubdownloader \
+docker compose -f docker-compose.vpn.yml exec -T lyricless \
   sqlite3 /app/prisma/prod.db ".backup '/tmp/backup.db'"
-docker compose -f docker-compose.vpn.yml cp hubdownloader:/tmp/backup.db \
+docker compose -f docker-compose.vpn.yml cp lyricless:/tmp/backup.db \
   $BACKUP_DIR/database_$DATE.db
 
 # Backup environment files
@@ -347,7 +347,7 @@ echo "Backup completed: $BACKUP_DIR"
 
 Make executable:
 ```bash
-chmod +x ~/backup-hubdownloader.sh
+chmod +x ~/backup-lyricless.sh
 ```
 
 ## Step 10: Performance Optimization
@@ -455,7 +455,7 @@ sudo nethogs
 docker compose -f docker-compose.vpn.yml logs -f
 
 # Check extraction history
-docker compose -f docker-compose.vpn.yml exec hubdownloader \
+docker compose -f docker-compose.vpn.yml exec lyricless \
   sqlite3 /app/prisma/prod.db "SELECT * FROM extractions ORDER BY createdAt DESC LIMIT 10;"
 ```
 

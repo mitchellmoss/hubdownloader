@@ -2,21 +2,21 @@ import { Metadata } from 'next'
 import AdUnit from '@/components/AdUnit'
 
 export const metadata: Metadata = {
-  title: 'About HubDownloader - Video URL Extraction Service',
-  description: 'Learn about HubDownloader, a free online tool for extracting video URLs from websites for personal use.',
+  title: 'About Lyricless - Video URL Extraction Service',
+  description: 'Learn about Lyricless, a free online tool for extracting video URLs from websites for personal use.',
 }
 
 export default function AboutPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-4xl font-bold mb-8">About HubDownloader</h1>
+      <h1 className="text-4xl font-bold mb-8">About Lyricless</h1>
       
       <AdUnit slot="8901234567" format="horizontal" className="mb-8" />
       
       <div className="prose prose-lg dark:prose-invert max-w-none">
-        <h2>What is HubDownloader?</h2>
+        <h2>What is Lyricless?</h2>
         <p>
-          HubDownloader is a free online service that helps you extract direct video URLs from web pages. 
+          Lyricless is a free online service that helps you extract direct video URLs from web pages. 
           Instead of storing videos on our servers, we simply detect and provide you with the direct links 
           to videos that are already publicly accessible on the web.
         </p>
@@ -47,7 +47,7 @@ export default function AboutPage() {
         
         <h2>Legal & Ethical Use</h2>
         <p>
-          HubDownloader is designed for legitimate purposes only:
+          Lyricless is designed for legitimate purposes only:
         </p>
         <ul>
           <li>Personal archival of content you have rights to access</li>
@@ -66,14 +66,14 @@ export default function AboutPage() {
           For questions, concerns, or DMCA requests, please contact us at:
         </p>
         <ul>
-          <li>General inquiries: info@hubdownloader.com</li>
-          <li>DMCA/Legal: dmca@hubdownloader.com</li>
-          <li>Technical support: support@hubdownloader.com</li>
+          <li>General inquiries: info@lyricless.com</li>
+          <li>DMCA/Legal: dmca@lyricless.com</li>
+          <li>Technical support: support@lyricless.com</li>
         </ul>
         
         <h2>Open Source</h2>
         <p>
-          HubDownloader is built with modern web technologies including Next.js, TypeScript, and Puppeteer. 
+          Lyricless is built with modern web technologies including Next.js, TypeScript, and Puppeteer. 
           We believe in transparency and may open-source parts of our codebase in the future.
         </p>
       </div>

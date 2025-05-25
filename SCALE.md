@@ -1,7 +1,7 @@
-# HubDownloader Scaling Guide
+# Lyricless Scaling Guide
 
 ## Overview
-This document outlines the infrastructure requirements and scaling strategies for serving HubDownloader to thousands of users.
+This document outlines the infrastructure requirements and scaling strategies for serving Lyricless to thousands of users.
 
 ## Key Resource-Intensive Components
 
@@ -205,7 +205,7 @@ With proper optimization:
 version: '3.8'
 services:
   web:
-    image: hubdownloader:latest
+    image: lyricless:latest
     replicas: 2
     resources:
       limits:
@@ -213,7 +213,7 @@ services:
         cpus: '2'
   
   worker:
-    image: hubdownloader-worker:latest
+    image: lyricless-worker:latest
     replicas: 5
     resources:
       limits:

@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import AdUnit from '@/components/AdUnit'
 
 export const metadata: Metadata = {
-  title: 'How to Download HLS Streams - HubDownloader',
+  title: 'How to Download HLS Streams - Lyricless',
   description: 'Complete guide on downloading HLS (.m3u8) video streams using yt-dlp, FFmpeg, and other tools.',
 }
 

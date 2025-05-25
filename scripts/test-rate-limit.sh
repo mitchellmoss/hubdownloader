@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Test rate limiting on HubDownloader endpoints
+# Test rate limiting on Lyricless endpoints
 
-echo "🧪 Testing HubDownloader Rate Limits"
+echo "🧪 Testing Lyricless Rate Limits"
 echo "===================================="
 
 # Colors for output

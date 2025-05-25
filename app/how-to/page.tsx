@@ -2,14 +2,14 @@ import { Metadata } from 'next'
 import AdUnit from '@/components/AdUnit'
 
 export const metadata: Metadata = {
-  title: 'How to Use HubDownloader - Video URL Extractor',
-  description: 'Learn how to extract video URLs from any website using HubDownloader. Step-by-step guide for downloading videos.',
+  title: 'How to Use Lyricless - Video URL Extractor',
+  description: 'Learn how to extract video URLs from any website using Lyricless. Step-by-step guide for downloading videos.',
 }
 
 export default function HowToPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-4xl font-bold mb-8">How to Use HubDownloader</h1>
+      <h1 className="text-4xl font-bold mb-8">How to Use Lyricless</h1>
       
       <AdUnit slot="4567890123" format="horizontal" className="mb-8" />
       
@@ -26,9 +26,9 @@ export default function HowToPage() {
           contains the video, not a general homepage or category page.
         </p>
         
-        <h2>Step 3: Paste URL in HubDownloader</h2>
+        <h2>Step 3: Paste URL in Lyricless</h2>
         <p>
-          Come back to HubDownloader and paste the URL into the input field on our homepage. 
+          Come back to Lyricless and paste the URL into the input field on our homepage. 
           Click the "Extract" button to start the process.
         </p>
         

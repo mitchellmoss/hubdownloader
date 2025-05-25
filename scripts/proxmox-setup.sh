@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# HubDownloader Proxmox LXC Setup Script
+# Lyricless Proxmox LXC Setup Script
 # Run this inside your Proxmox container after initial setup
 
 set -e
@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}🚀 HubDownloader Proxmox Setup${NC}"
+echo -e "${BLUE}🚀 Lyricless Proxmox Setup${NC}"
 echo "=================================="
 
 # Check if running as root
@@ -73,14 +73,14 @@ fi
 echo -e "${GREEN}✓ TUN device available${NC}"
 
 # Step 7: Clone repository
-echo -e "\n${BLUE}7. Setting up HubDownloader...${NC}"
-if [ ! -d "$HOME/hubdownloader" ]; then
+echo -e "\n${BLUE}7. Setting up Lyricless...${NC}"
+if [ ! -d "$HOME/lyricless" ]; then
     cd $HOME
-    git clone https://github.com/mitchellmoss/hubdownloader.git
-    cd hubdownloader
+    git clone https://github.com/mitchellmoss/lyricless.git
+    cd lyricless
 else
     echo -e "${GREEN}✓ Repository already cloned${NC}"
-    cd $HOME/hubdownloader
+    cd $HOME/lyricless
     git pull
 fi
 
@@ -118,29 +118,29 @@ fi
 
 # Step 11: Create systemd service
 echo -e "\n${BLUE}11. Creating systemd service...${NC}"
-cat > /tmp/hubdownloader.service << EOF
+cat > /tmp/lyricless.service << EOF
 [Unit]
-Description=HubDownloader with VPN
+Description=Lyricless with VPN
 Requires=docker.service
 After=docker.service network.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=$HOME/hubdownloader
+WorkingDirectory=$HOME/lyricless
 ExecStart=/usr/bin/docker compose -f docker-compose.vpn.yml up -d
 ExecStop=/usr/bin/docker compose -f docker-compose.vpn.yml down
 ExecReload=/usr/bin/docker compose -f docker-compose.vpn.yml restart
 Restart=on-failure
 RestartSec=10
-StandardOutput=append:/var/log/hubdownloader.log
-StandardError=append:/var/log/hubdownloader.error.log
+StandardOutput=append:/var/log/lyricless.log
+StandardError=append:/var/log/lyricless.error.log
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-sudo mv /tmp/hubdownloader.service /etc/systemd/system/
+sudo mv /tmp/lyricless.service /etc/systemd/system/
 sudo systemctl daemon-reload
 echo -e "${GREEN}✓ Systemd service created${NC}"
 
@@ -187,9 +187,9 @@ echo "3. Check VPN status:"
 echo "   ${YELLOW}./scripts/check-vpn-status.sh${NC}"
 echo ""
 echo "4. Enable auto-start:"
-echo "   ${YELLOW}sudo systemctl enable hubdownloader${NC}"
+echo "   ${YELLOW}sudo systemctl enable lyricless${NC}"
 echo ""
-echo "5. Access HubDownloader at:"
+echo "5. Access Lyricless at:"
 echo "   ${GREEN}http://$(hostname -I | awk '{print $1}'):3000${NC}"
 
 # Check for common issues

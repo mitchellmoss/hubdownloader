@@ -1,8 +1,8 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Example Sites - HubDownloader',
-  description: 'Example websites that work well with HubDownloader video extraction',
+  title: 'Example Sites - Lyricless',
+  description: 'Example websites that work well with Lyricless video extraction',
 }
 
 export default function ExamplesPage() {
@@ -52,7 +52,7 @@ export default function ExamplesPage() {
       <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-6 mb-8">
         <h2 className="text-xl font-semibold mb-2">Important Note</h2>
         <p className="text-gray-700 dark:text-gray-300">
-          HubDownloader works best with sites that use standard HTML5 video players or direct video file links.
+          Lyricless works best with sites that use standard HTML5 video players or direct video file links.
           It cannot bypass DRM protection or terms of service restrictions.
         </p>
       </div>

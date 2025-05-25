@@ -1,4 +1,4 @@
-# HubDownloader - General Purpose Video Downloader
+# Lyricless - General Purpose Video Downloader
 
 ## Project Overview
 A web application that extracts direct video URLs from various sources (CDN links and HTML-embedded videos) and provides download links without storing videos on our server. Now supports YouTube, adult sites (PornHub, etc.), and general video extraction with HLS/DASH streaming support.
@@ -197,8 +197,8 @@ GET /api/history - Get user's extraction history
 ## Installation Instructions
 ```bash
 # Clone repository
-git clone https://github.com/mitchellmoss/hubdownloader.git
-cd hubdownloader
+git clone https://github.com/mitchellmoss/lyricless.git
+cd lyricless
 
 # Install dependencies
 npm install

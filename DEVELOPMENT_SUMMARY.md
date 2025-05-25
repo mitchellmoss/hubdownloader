@@ -1,4 +1,4 @@
-# HubDownloader Development Summary
+# Lyricless Development Summary
 
 ## Project Overview
 Successfully created a full-stack video URL extraction web application using Next.js 14 with the following architecture:

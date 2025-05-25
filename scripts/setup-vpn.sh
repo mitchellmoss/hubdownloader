@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# HubDownloader VPN Setup Script
+# Lyricless VPN Setup Script
 set -e
 
-echo "🔐 HubDownloader VPN Setup"
+echo "🔐 Lyricless VPN Setup"
 echo "=========================="
 
 # Check if Docker is installed
@@ -37,7 +37,7 @@ if [ -z "$EXPRESSVPN_USERNAME" ] || [ "$EXPRESSVPN_USERNAME" == "your_activation
 fi
 
 # Build the application
-echo "🔨 Building HubDownloader..."
+echo "🔨 Building Lyricless..."
 docker-compose -f docker-compose.vpn.yml build
 
 # Test VPN connection
@@ -60,7 +60,7 @@ else
 fi
 
 # Start all services
-echo "🚀 Starting HubDownloader with VPN..."
+echo "🚀 Starting Lyricless with VPN..."
 docker-compose -f docker-compose.vpn.yml up -d
 
 # Wait for services to be ready
@@ -73,7 +73,7 @@ docker-compose -f docker-compose.vpn.yml ps
 
 echo ""
 echo "✅ Setup complete!"
-echo "   - HubDownloader is running at: http://localhost:3000"
+echo "   - Lyricless is running at: http://localhost:3000"
 echo "   - Your real IP is hidden behind ExpressVPN"
 echo ""
 echo "📝 Useful commands:"

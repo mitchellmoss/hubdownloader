@@ -94,7 +94,7 @@ pct set 100 -onboot 1
 
 # Inside container:
 systemctl enable docker
-systemctl enable hubdownloader
+systemctl enable lyricless
 ```
 
 ### 7. ExpressVPN Connection Failures
@@ -273,9 +273,9 @@ docker compose -f docker-compose.vpn.yml up -d
 pct snapshot 100 before-update
 
 # Or backup inside container:
-tar -czf ~/hubdownloader-backup-$(date +%Y%m%d).tar.gz \
-  ~/hubdownloader/.env* \
-  ~/hubdownloader/prisma/*.db
+tar -czf ~/lyricless-backup-$(date +%Y%m%d).tar.gz \
+  ~/lyricless/.env* \
+  ~/lyricless/prisma/*.db
 ```
 
 ## Getting Help

@@ -8,28 +8,28 @@ import Footer from '@/components/Footer'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'HubDownloader - Extract Video URLs from Any Website',
+  title: 'Lyricless - Extract Video URLs from Any Website',
   description: 'Free online tool to extract video URLs from websites. Support for MP4, WebM, HLS, and DASH streams. No registration required.',
   keywords: ['video downloader', 'url extractor', 'video extractor', 'download videos', 'extract video links'],
   openGraph: {
-    title: 'HubDownloader - Video URL Extractor',
+    title: 'Lyricless - Video URL Extractor',
     description: 'Extract direct video URLs from any website instantly',
     type: 'website',
     locale: 'en_US',
-    url: 'https://hubdownloader.com',
-    siteName: 'HubDownloader',
+    url: 'https://lyricless.com',
+    siteName: 'Lyricless',
     images: [{
-      url: 'https://hubdownloader.com/og-image.jpg',
+      url: 'https://lyricless.com/og-image.jpg',
       width: 1200,
       height: 630,
-      alt: 'HubDownloader - Video URL Extractor'
+      alt: 'Lyricless - Video URL Extractor'
     }]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HubDownloader - Video URL Extractor',
+    title: 'Lyricless - Video URL Extractor',
     description: 'Extract direct video URLs from any website instantly',
-    images: ['https://hubdownloader.com/og-image.jpg'],
+    images: ['https://lyricless.com/og-image.jpg'],
   },
   robots: {
     index: true,

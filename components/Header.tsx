@@ -8,7 +8,7 @@ export default function Header() {
         <nav className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-xl font-bold">
             <Download className="w-6 h-6 text-blue-600" />
-            <span>HubDownloader</span>
+            <span>Lyricless</span>
           </Link>
           
           <div className="flex items-center gap-6">
