@@ -29,9 +29,21 @@ echo -e "${GREEN}=== Lyricless Video Downloader Proxmox LXC Setup ===${NC}"
 echo ""
 
 # Check if running on Proxmox
-if [ ! -f /etc/pve/version ]; then
+if [ ! -d /etc/pve ] && ! command -v pvesh &> /dev/null && ! command -v pct &> /dev/null; then
     echo -e "${RED}Error: This script must be run on a Proxmox host${NC}"
-    exit 1
+    echo -e "${YELLOW}Debug info:${NC}"
+    echo "  /etc/pve exists: $([ -d /etc/pve ] && echo 'yes' || echo 'no')"
+    echo "  pvesh command: $(command -v pvesh || echo 'not found')"
+    echo "  pct command: $(command -v pct || echo 'not found')"
+    echo ""
+    echo -e "${YELLOW}If you are on a Proxmox host, you can bypass this check with:${NC}"
+    echo "  SKIP_PROXMOX_CHECK=1 $0"
+    
+    if [ "$SKIP_PROXMOX_CHECK" != "1" ]; then
+        exit 1
+    else
+        echo -e "${YELLOW}⚠️  Skipping Proxmox check - proceeding at your own risk${NC}"
+    fi
 fi
 
 # Download Ubuntu 22.04 template if not exists
