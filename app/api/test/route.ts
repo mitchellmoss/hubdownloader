@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     console.log('Testing Puppeteer launch...')
     
     const browser = await puppeteer.launch({
-      headless: 'new',
+      headless: true,
       args: process.platform === 'darwin' 
         ? ['--disable-gpu', '--disable-dev-shm-usage']
         : ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage']

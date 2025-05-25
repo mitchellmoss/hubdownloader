@@ -22,7 +22,7 @@ export async function getBrowser(): Promise<Browser> {
       }
       
       browser = await puppeteer.launch({
-        headless: 'new',
+        headless: true,
         args,
       })
     } catch (error) {
@@ -73,7 +73,7 @@ export async function extractVideoUrls(url: string): Promise<VideoInfo[]> {
     }
     
     browser = await puppeteer.launch({
-      headless: 'new',
+      headless: true,
       args,
     })
     
