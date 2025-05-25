@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  vpn:
+    image: qmcgaw/gluetun
+    container_name: hubdownloader-vpn
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      # ExpressVPN Configuration
+      - VPN_SERVICE_PROVIDER=expressvpn
+      - OPENVPN_USER=${EXPRESSVPN_USERNAME}
+      - OPENVPN_PASSWORD=${EXPRESSVPN_PASSWORD}
+      - SERVER_COUNTRIES=${EXPRESSVPN_COUNTRY:-USA}  # Default to USA
+      - SERVER_CITIES=${EXPRESSVPN_CITY:-}  # Optional: specific city
+      
+      # VPN Options
+      - VPN_TYPE=openvpn
+      - OPENVPN_VERSION=2.5
+      - PROTOCOL=udp
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY:-}  # Optional if using WireGuard
+      - WIREGUARD_PRESHARED_KEY=${WIREGUARD_PRESHARED_KEY:-}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES:-}
+      
+      # Network Configuration
+      - FIREWALL_OUTBOUND_SUBNETS=0.0.0.0/0
+      - DOT=off  # DNS over TLS
+      - BLOCK_MALICIOUS=on
+      - BLOCK_SURVEILLANCE=on
+      - BLOCK_ADS=off  # Keep off since we're serving ads
+      
+      # Health Check
+      - HEALTH_VPN_DURATION_INITIAL=30s
+      - HEALTH_VPN_DURATION_ADDITION=5s
+      
+      # Logging
+      - LOG_LEVEL=info
+    ports:
+      # Expose HubDownloader through VPN
+      - "3000:3000"  # Next.js app
+      - "8888:8888"  # HTTP proxy (optional)
+      - "1080:1080"  # SOCKS5 proxy (optional)
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  hubdownloader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hubdownloader-app
+    network_mode: "service:vpn"  # Route ALL traffic through VPN
+    depends_on:
+      vpn:
+        condition: service_healthy
+    environment:
+      # App Configuration
+      - NODE_ENV=production
+      - DATABASE_URL=file:./prisma/prod.db
+      
+      # Proxy Configuration for outbound requests
+      - HTTP_PROXY=http://localhost:8888
+      - HTTPS_PROXY=http://localhost:8888
+      - NO_PROXY=localhost,127.0.0.1
+      
+      # ExpressVPN IP for verification
+      - VPN_CHECK_URL=https://api.ipify.org
+      
+      # App-specific settings
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+    volumes:
+      - ./prisma:/app/prisma
+      - ./public:/app/public
+      - /tmp:/tmp  # For temporary video files
+    restart: unless-stopped
+    command: npm start
+
+  # Optional: Proxy checker service
+  ip-checker:
+    image: curlimages/curl:latest
+    container_name: hubdownloader-ip-checker
+    network_mode: "service:vpn"
+    depends_on:
+      - vpn
+    command: >
+      sh -c "while true; do 
+        echo 'Current IP:'; 
+        curl -s https://api.ipify.org; 
+        echo ''; 
+        sleep 300; 
+      done"
+    restart: unless-stopped
+
+volumes:
+  vpn-data:
+    driver: local
