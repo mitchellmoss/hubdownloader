@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const id = nanoid()
     
     // Extract video URLs
-    let videos
+    let videos: Array<{ url: string; quality?: string; type?: string }> = []
     
     // Check if it's YouTube
     const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
