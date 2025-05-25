@@ -4,6 +4,7 @@ interface VideoInfo {
   format?: string
   quality?: string
   title?: string
+  size?: number
   hasAudio?: boolean
   isHLS?: boolean
   downloadInstructions?: string
