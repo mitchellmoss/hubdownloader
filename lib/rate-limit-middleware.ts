@@ -89,7 +89,7 @@ export async function rateLimitMiddleware(
     // Increment count
     await prisma.rateLimit.update({
       where: { id: rateLimit.id },
-      data: { count: { increment: 1 } }
+      data: { count: rateLimit.count + 1 }
     })
 
     // Add rate limit headers to help clients
