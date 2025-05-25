@@ -36,9 +36,23 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# prisma
+# prisma - database files (NEVER commit these!)
 prisma/*.db
 prisma/*.db-journal
+prisma/*.db-shm
+prisma/*.db-wal
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-shm
+*.db-wal
+
+# database backups
+/backups/
+*.backup
+*.sql
+*.dump
 
 # puppeteer
 .cache/
