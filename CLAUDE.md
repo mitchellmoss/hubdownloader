@@ -237,6 +237,14 @@ npm start
 - YouTube URLs are best handled with yt-dlp installed
 - Falls back to HLS stream detection via Puppeteer
 - Quality is detected from itag parameters in URLs
+- Audio and video streams are properly merged
+
+### Adult Site Extraction (PornHub, xVideos, xHamster)
+- **HLS Audio Issues**: Many adult sites serve video and audio in separate HLS playlists
+- **Solution**: Use "Convert to MP4" option which uses yt-dlp with the original page URL
+- **Format Selection**: Adult sites use `best/bestvideo+bestaudio` format selector for better compatibility
+- **Headers**: Proper referer headers are set automatically based on the site
+- **Best Practice**: Always install yt-dlp for best results with adult sites
 
 ### Development Notes
 - Run with `npm run dev` for hot reload

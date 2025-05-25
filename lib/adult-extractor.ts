@@ -150,7 +150,7 @@ export async function extractAdultVideoUrls(url: string): Promise<VideoInfo[]> {
             quality: `${media.quality}p`,
             title: videoInfo.title,
             isHLS: true,
-            downloadInstructions: 'This is an HLS stream. Use the download options below.'
+            downloadInstructions: 'This is an HLS stream. If audio is missing, use the "Convert to MP4" option which will attempt to download both audio and video streams.'
           })
         }
       })
@@ -169,7 +169,7 @@ export async function extractAdultVideoUrls(url: string): Promise<VideoInfo[]> {
             quality: quality,
             title: videoInfo.title,
             isHLS: isHLS,
-            downloadInstructions: isHLS ? 'This is an HLS stream. Use the download options below.' : undefined
+            downloadInstructions: isHLS ? 'This is an HLS stream. If audio is missing, use the "Convert to MP4" option which will attempt to download both audio and video streams.' : undefined
           })
         }
       }

@@ -37,9 +37,10 @@ export async function POST(request: NextRequest) {
     }
     
     // Download and convert HLS to MP4
-    // If we have a sourceUrl (original YouTube URL), use that with yt-dlp for better results
+    // If we have a sourceUrl (original page URL), use that with yt-dlp for better results
+    // This is especially important for adult sites where yt-dlp can find audio streams
     outputFile = await downloadHLSToMP4({
-      url: sourceUrl || url,  // Prefer sourceUrl for yt-dlp
+      url: sourceUrl || url,  // Prefer sourceUrl for yt-dlp (finds audio+video)
       hlsUrl: url,  // Keep the HLS URL as fallback
       quality,  // Pass user's quality selection
       onProgress: (percent, message) => {

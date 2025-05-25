@@ -92,33 +92,58 @@ async function downloadWithYtDlp(
     
     // Determine appropriate referer based on URL
     let referer = 'https://www.youtube.com/'
+    let useAdultSiteOptions = false
+    
     if (url.includes('pornhub.com')) {
       referer = 'https://www.pornhub.com/'
+      useAdultSiteOptions = true
     } else if (url.includes('xvideos.com')) {
       referer = 'https://www.xvideos.com/'
+      useAdultSiteOptions = true
     } else if (url.includes('xhamster.com')) {
       referer = 'https://xhamster.com/'
+      useAdultSiteOptions = true
     }
     
     // Build format selector based on quality
     let formatSelector = 'bestvideo+bestaudio/best'
     console.log(`Quality parameter received: "${quality}"`)
     
-    if (quality && quality !== 'best' && quality !== 'HLS Stream' && quality !== 'Direct') {
-      // Extract numeric resolution from quality string (e.g. "720p" -> "720", "1080p60" -> "1080")
-      const resolution = quality.match(/\d+/)?.[0]
-      console.log(`Extracted resolution: "${resolution}" from quality: "${quality}"`)
-      
-      if (resolution) {
-        // Select best video with height <= requested + best audio
-        // This ensures we don't exceed the user's requested quality
-        formatSelector = `bestvideo[height<=?${resolution}]+bestaudio/best[height<=?${resolution}]`
-        console.log(`Using quality-specific format selector for ${quality}: ${formatSelector}`)
+    // For adult sites, we need to ensure audio is included
+    if (useAdultSiteOptions) {
+      console.log('Using adult site options for better audio/video handling')
+      if (quality && quality !== 'best' && quality !== 'HLS Stream' && quality !== 'Direct') {
+        // Extract numeric resolution from quality string (e.g. "720p" -> "720", "1080p60" -> "1080")
+        const resolution = quality.match(/\d+/)?.[0]
+        console.log(`Extracted resolution: "${resolution}" from quality: "${quality}"`)
+        
+        if (resolution) {
+          // For adult sites, prioritize formats with both video and audio
+          formatSelector = `best[height<=?${resolution}]/bestvideo[height<=?${resolution}]+bestaudio`
+          console.log(`Using adult site format selector for ${quality}: ${formatSelector}`)
+        }
       } else {
-        console.log(`Could not extract resolution from quality: "${quality}"`)
+        // For adult sites without specific quality, prefer combined formats
+        formatSelector = 'best/bestvideo+bestaudio'
       }
     } else {
-      console.log(`Using default format selector (quality was: "${quality}")`);
+      // Non-adult sites (YouTube, etc.)
+      if (quality && quality !== 'best' && quality !== 'HLS Stream' && quality !== 'Direct') {
+        // Extract numeric resolution from quality string (e.g. "720p" -> "720", "1080p60" -> "1080")
+        const resolution = quality.match(/\d+/)?.[0]
+        console.log(`Extracted resolution: "${resolution}" from quality: "${quality}"`)
+        
+        if (resolution) {
+          // Select best video with height <= requested + best audio
+          // This ensures we don't exceed the user's requested quality
+          formatSelector = `bestvideo[height<=?${resolution}]+bestaudio/best[height<=?${resolution}]`
+          console.log(`Using quality-specific format selector for ${quality}: ${formatSelector}`)
+        } else {
+          console.log(`Could not extract resolution from quality: "${quality}"`)
+        }
+      } else {
+        console.log(`Using default format selector (quality was: "${quality}")`);
+      }
     }
     
     const args = [
@@ -133,8 +158,18 @@ async function downloadWithYtDlp(
       '--fragment-retries', '10',
       '--retry-sleep', '3',
       '-o', outputFile,
-      url
     ]
+    
+    // Add additional options for adult sites
+    if (useAdultSiteOptions) {
+      args.push(
+        '--no-playlist',  // Don't download playlists, just the video
+        '--prefer-free-formats',  // Prefer formats that contain both video and audio
+        '--remux-video', 'mp4',  // Ensure mp4 output
+      )
+    }
+    
+    args.push(url)
     
     const ytdlp = spawn(ytdlpPath, args)
     
@@ -205,6 +240,16 @@ async function downloadWithFFmpeg(
     })
   })
   
+  // Determine appropriate referer from URL
+  let referer = 'https://www.youtube.com/'
+  if (url.includes('pornhub.com')) {
+    referer = 'https://www.pornhub.com/'
+  } else if (url.includes('xvideos.com')) {
+    referer = 'https://www.xvideos.com/'
+  } else if (url.includes('xhamster.com')) {
+    referer = 'https://xhamster.com/'
+  }
+
   // Now try to download with more aggressive retry logic
   const ffmpegArgs = [
     '-hide_banner',
@@ -212,7 +257,7 @@ async function downloadWithFFmpeg(
     '-http_persistent', '0',  // Disable persistent connections
     '-multiple_requests', '1',
     '-seekable', '0',
-    '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\r\nReferer: https://www.pornhub.com/\r\n',
+    '-headers', `User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\r\nReferer: ${referer}\r\n`,
     '-reconnect', '1',
     '-reconnect_at_eof', '1',
     '-reconnect_streamed', '1',
