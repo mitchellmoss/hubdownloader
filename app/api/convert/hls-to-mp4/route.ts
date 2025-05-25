@@ -7,6 +7,7 @@ import { downloadHLSToMP4, cleanupHLSDownload } from '@/lib/hls-downloader'
 const convertSchema = z.object({
   url: z.string().url(),
   sourceUrl: z.string().url().optional(),  // Original page URL (e.g. YouTube URL)
+  quality: z.string().optional(),  // User's selected quality (e.g. "720p", "1080p")
 })
 
 export async function POST(request: NextRequest) {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json()
-    const { url, sourceUrl } = convertSchema.parse(body)
+    const { url, sourceUrl, quality } = convertSchema.parse(body)
     
     // Only allow HLS URLs
     if (!url.includes('.m3u8')) {
@@ -27,6 +28,8 @@ export async function POST(request: NextRequest) {
     console.log('Starting HLS to MP4 conversion:')
     console.log('  HLS URL:', url)
     console.log('  Source URL:', sourceUrl || 'NOT PROVIDED')
+    console.log('  Quality:', quality || 'best (default)')
+    console.log('  Raw body quality:', body.quality)  // Debug the raw value
     if (sourceUrl) {
       console.log('  Using source URL for yt-dlp (better quality)')
     } else {
@@ -38,6 +41,7 @@ export async function POST(request: NextRequest) {
     outputFile = await downloadHLSToMP4({
       url: sourceUrl || url,  // Prefer sourceUrl for yt-dlp
       hlsUrl: url,  // Keep the HLS URL as fallback
+      quality,  // Pass user's quality selection
       onProgress: (percent, message) => {
         console.log(`Progress: ${percent.toFixed(1)}% - ${message}`)
       }

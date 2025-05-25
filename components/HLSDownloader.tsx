@@ -77,7 +77,7 @@ export default function HLSDownloader({ url, quality, sourceUrl }: HLSDownloader
     setError('')
 
     try {
-      console.log('Sending conversion request:', { url, sourceUrl })
+      console.log('Sending conversion request:', { url, sourceUrl, quality })
       
       // Use the conversion endpoint
       const response = await fetch('/api/convert/hls-to-mp4', {
@@ -85,7 +85,7 @@ export default function HLSDownloader({ url, quality, sourceUrl }: HLSDownloader
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url, sourceUrl }),
+        body: JSON.stringify({ url, sourceUrl, quality }),
       })
 
       if (!response.ok) {

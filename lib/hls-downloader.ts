@@ -7,11 +7,12 @@ import { randomBytes } from 'crypto'
 interface HLSDownloadOptions {
   url: string  // Primary URL to try (could be sourceUrl or HLS URL)
   hlsUrl?: string  // Fallback HLS URL if primary fails
+  quality?: string  // User's selected quality (e.g. "720p", "1080p")
   onProgress?: (percent: number, message: string) => void
 }
 
 export async function downloadHLSToMP4(options: HLSDownloadOptions): Promise<string> {
-  const { url, hlsUrl, onProgress } = options
+  const { url, hlsUrl, quality, onProgress } = options
   const tempDir = join(tmpdir(), `hls_${randomBytes(8).toString('hex')}`)
   const outputFile = join(tempDir, 'output.mp4')
   
@@ -27,13 +28,13 @@ export async function downloadHLSToMP4(options: HLSDownloadOptions): Promise<str
     if (ytdlpPath) {
       console.log('Using yt-dlp for HLS download...')
       // Try with primary URL first (might be original YouTube URL)
-      const result = await downloadWithYtDlp(ytdlpPath, url, outputFile, onProgress)
+      const result = await downloadWithYtDlp(ytdlpPath, url, outputFile, quality, onProgress)
       if (result) return outputFile
       
       // If we have a different HLS URL, try that too
       if (hlsUrl && hlsUrl !== url) {
         console.log('Primary URL failed, trying HLS URL with yt-dlp...')
-        const hlsResult = await downloadWithYtDlp(ytdlpPath, hlsUrl, outputFile, onProgress)
+        const hlsResult = await downloadWithYtDlp(ytdlpPath, hlsUrl, outputFile, quality, onProgress)
         if (hlsResult) return outputFile
       }
     }
@@ -83,6 +84,7 @@ async function downloadWithYtDlp(
   ytdlpPath: string,
   url: string,
   outputFile: string,
+  quality?: string,
   onProgress?: (percent: number, message: string) => void
 ): Promise<boolean> {
   return new Promise((resolve) => {
@@ -98,9 +100,30 @@ async function downloadWithYtDlp(
       referer = 'https://xhamster.com/'
     }
     
+    // Build format selector based on quality
+    let formatSelector = 'bestvideo+bestaudio/best'
+    console.log(`Quality parameter received: "${quality}"`)
+    
+    if (quality && quality !== 'best' && quality !== 'HLS Stream' && quality !== 'Direct') {
+      // Extract numeric resolution from quality string (e.g. "720p" -> "720", "1080p60" -> "1080")
+      const resolution = quality.match(/\d+/)?.[0]
+      console.log(`Extracted resolution: "${resolution}" from quality: "${quality}"`)
+      
+      if (resolution) {
+        // Select best video with height <= requested + best audio
+        // This ensures we don't exceed the user's requested quality
+        formatSelector = `bestvideo[height<=?${resolution}]+bestaudio/best[height<=?${resolution}]`
+        console.log(`Using quality-specific format selector for ${quality}: ${formatSelector}`)
+      } else {
+        console.log(`Could not extract resolution from quality: "${quality}"`)
+      }
+    } else {
+      console.log(`Using default format selector (quality was: "${quality}")`);
+    }
+    
     const args = [
-      // Format selection: prefer best quality with both video and audio
-      '-f', 'bestvideo+bestaudio/best',
+      // Format selection based on user's quality choice
+      '-f', formatSelector,
       '--merge-output-format', 'mp4',
       '--no-check-certificate',
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',

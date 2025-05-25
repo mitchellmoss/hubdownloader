@@ -1,18 +1,19 @@
 # HubDownloader - General Purpose Video Downloader
 
 ## Project Overview
-A web application that extracts direct video URLs from various sources (CDN links and HTML-embedded videos) and provides download links without storing videos on our server.
+A web application that extracts direct video URLs from various sources (CDN links and HTML-embedded videos) and provides download links without storing videos on our server. Now supports YouTube, adult sites (PornHub, etc.), and general video extraction with HLS/DASH streaming support.
 
 ## Tech Stack
 - **Full Stack**: Next.js 14 with App Router (TypeScript)
 - **Backend API**: Next.js API Routes
-- **URL Extraction**: Puppeteer/Playwright for dynamic content
+- **URL Extraction**: Puppeteer for dynamic content
+- **Video Processing**: yt-dlp and ffmpeg for HLS/DASH streams
 - **Client-side**: Video URL detection scripts
 - **Styling**: Tailwind CSS
-- **Database**: SQLite (for analytics, user sessions)
-- **ORM**: Prisma or Drizzle ORM
-- **Ad Integration**: Google AdSense
-- **Analytics**: Google Analytics 4
+- **Database**: SQLite via Prisma (for analytics, extraction history)
+- **ORM**: Prisma
+- **Ad Integration**: Google AdSense (prepared)
+- **Analytics**: Google Analytics 4 (prepared)
 
 ## Core Features
 
@@ -90,48 +91,68 @@ GET /api/history - Get user's extraction history
 - SQLite for analytics only (no sensitive data)
 - Regular browser instance recycling
 
-## Development Phases
+## Current Implementation Status
 
-### Phase 1: Core Functionality (Week 1-2)
-- [ ] Setup Next.js 14 project with App Router
-- [ ] Configure TypeScript and Tailwind CSS
-- [ ] Setup SQLite for analytics
-- [ ] Implement Puppeteer integration
-- [ ] Create /api/extract endpoint
-- [ ] Build SSR homepage with URL input
-- [ ] Basic video URL detection (MP4, WebM)
-- [ ] Results display page
+### Completed Features ✅
+- **Core Infrastructure**
+  - Next.js 14 with App Router and TypeScript
+  - Tailwind CSS styling with dark mode support
+  - SQLite database via Prisma for extraction history
+  - Rate limiting (10 requests/minute per IP)
+  
+- **Video Extraction**
+  - Puppeteer integration for dynamic content extraction
+  - YouTube video extraction with yt-dlp support
+  - Adult site extraction (PornHub, xVideos, xHamster)
+  - HLS stream detection and download support
+  - Quality detection for multi-quality videos
+  - Network request interception for video URLs
+  - **Quality-specific downloads** - respects user's resolution choice (480p, 720p, 1080p, etc.)
+  
+- **HLS/DASH Support**
+  - HLS downloader component with quick download (.ts)
+  - Convert to MP4 functionality using ffmpeg
+  - yt-dlp integration for better compatibility
+  - Progress tracking and error handling
+  - **Audio+Video merging** for YouTube videos
+  - **Quality-aware format selection** using yt-dlp format selectors
+  
+- **UI/UX Features**
+  - Responsive design with mobile support
+  - Copy URL to clipboard
+  - Loading states and error messages
+  - Format-specific download instructions
+  - Debug logging in development
+  - **Long URL handling** with proper text wrapping
+  
+### Specialized Extractors
+1. **YouTube Extractor** (`lib/youtube-extractor.ts`)
+   - Attempts yt-dlp first for best results
+   - Falls back to Puppeteer for HLS streams
+   - Detects quality from itag parameters
+   - Properly marks HLS streams
+   - Prioritizes non-HLS formats with audio
 
-### Phase 2: Advanced Features (Week 3-4)
-- [ ] HLS/DASH stream URL detection
-- [ ] Iframe embed extraction
-- [ ] Network request interception
-- [ ] Multiple quality detection
-- [ ] Browser fingerprinting evasion
-- [ ] Extraction history with SQLite
+2. **Adult Site Extractor** (`lib/adult-extractor.ts`)
+   - Uses pornhub.js package for PornHub
+   - Falls back to Puppeteer when needed
+   - Handles HLS streams properly
+   - Filters out ads and tracking URLs
 
-### Phase 3: UI/UX Enhancement (Week 5)
-- [ ] Responsive design
-- [ ] URL extraction progress indicator
-- [ ] Copy-to-clipboard functionality
-- [ ] Error handling and retry
-- [ ] Loading states with skeleton UI
-- [ ] Download instructions per format
+3. **General Puppeteer Extractor** (`lib/puppeteer.ts`)
+   - Catches all video formats (mp4, webm, m3u8, mpd)
+   - Filters out ads, analytics, and non-video URLs
+   - Detects HLS streams automatically
 
-### Phase 4: Monetization & SEO (Week 6)
-- [ ] AdSense integration
-- [ ] SEO optimizations
-- [ ] Analytics setup
-- [ ] Performance optimization
-- [ ] CDN integration
-
-### Phase 5: Scaling & Polish (Week 7-8)
-- [ ] Browser pool management
+### Pending Features 🚧
+- [ ] AdSense integration (placeholders ready)
+- [ ] Google Analytics 4 setup
+- [ ] User accounts and saved extractions
+- [ ] Premium tier (ad-free, higher limits)
+- [ ] Browser pool management for scaling
 - [ ] Request queuing system
 - [ ] Analytics dashboard
-- [ ] Rate limiting implementation
 - [ ] API documentation
-- [ ] Performance optimization
 
 ## Legal Considerations
 - Clear terms of service
@@ -147,15 +168,39 @@ GET /api/history - Get user's extraction history
 - Browser memory < 500MB per instance
 - 95% uptime
 
-## Deployment
-- Full Stack App: VPS (DigitalOcean 4GB RAM minimum)
-- Browser Instances: Puppeteer with Chrome
-- Database: SQLite file for analytics
-- Process Manager: PM2 for Node.js
-- Reverse Proxy: Nginx
-- SSL: Let's Encrypt
-- Domain: Choose SEO-friendly name
-- Monitoring: Basic health checks
+## Deployment Requirements
+- **Server**: VPS with 4GB+ RAM (DigitalOcean/AWS/Hetzner)
+- **Dependencies**: 
+  - Node.js 18+
+  - Chrome/Chromium for Puppeteer
+  - ffmpeg for video conversion
+  - yt-dlp for enhanced extraction (optional but recommended)
+- **Process Manager**: PM2 for Node.js
+- **Reverse Proxy**: Nginx with proper headers for video streaming
+- **SSL**: Let's Encrypt for HTTPS
+- **Database**: SQLite (file-based, included in deployment)
+
+## Installation Instructions
+```bash
+# Clone repository
+git clone https://github.com/mitchellmoss/hubdownloader.git
+cd hubdownloader
+
+# Install dependencies
+npm install
+
+# Setup database
+npx prisma migrate deploy
+
+# Install system dependencies
+sudo apt update
+sudo apt install -y chromium-browser ffmpeg
+pip install yt-dlp
+
+# Build and start
+npm run build
+npm start
+```
 
 ## SEO Keywords Target
 - "video downloader"
@@ -180,3 +225,31 @@ GET /api/history - Get user's extraction history
 - Server costs vs revenue
 - Page load speed
 - Extraction success rate
+
+## Known Issues & Solutions
+
+### HLS Download Issues
+- **HMAC Authentication Errors**: Some sites use time-based tokens. Use yt-dlp for better handling
+- **Incomplete Downloads**: Install yt-dlp for more reliable HLS downloads
+- **Conversion Failures**: Ensure ffmpeg is installed and up to date
+
+### YouTube Extraction
+- YouTube URLs are best handled with yt-dlp installed
+- Falls back to HLS stream detection via Puppeteer
+- Quality is detected from itag parameters in URLs
+
+### Development Notes
+- Run with `npm run dev` for hot reload
+- Check browser console for extraction debug logs
+- Database file is at `prisma/dev.db`
+- Logs show extraction flow: YouTube → Adult → Puppeteer
+
+## Testing Checklist
+- [ ] YouTube video extraction (with/without yt-dlp)
+- [ ] Adult site video extraction
+- [ ] HLS stream download (.ts format)
+- [ ] HLS to MP4 conversion
+- [ ] Rate limiting (>10 requests/minute)
+- [ ] Mobile responsive design
+- [ ] Error handling for invalid URLs
+- [ ] Quality-specific downloads (480p, 720p, 1080p)
