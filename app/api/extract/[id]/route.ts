@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit-middleware'
+import { checkRateLimit, createRateLimitResponse } from '@/lib/simple-rate-limit'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // Check rate limit for results endpoint
-  const rateLimitResponse = await rateLimitMiddleware(request, RATE_LIMIT_CONFIGS.results)
-  if (rateLimitResponse) {
-    return rateLimitResponse
+  // Check rate limit (60 requests per minute for results)
+  const rateLimit = await checkRateLimit(request, 60, 60000)
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(
+      'Too many requests. Please wait before trying again.',
+      rateLimit.resetAt
+    )
   }
 
   try {

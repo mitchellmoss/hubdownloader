@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit-middleware'
+import { checkRateLimit, createRateLimitResponse } from '@/lib/simple-rate-limit'
 
 export async function GET(request: NextRequest) {
-  // Check rate limit for download endpoint
-  const rateLimitResponse = await rateLimitMiddleware(request, RATE_LIMIT_CONFIGS.download)
-  if (rateLimitResponse) {
-    return rateLimitResponse
+  // Check rate limit (20 requests per minute for downloads)
+  const rateLimit = await checkRateLimit(request, 20, 60000)
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(
+      'Too many download requests. Please wait before trying again.',
+      rateLimit.resetAt
+    )
   }
 
   const searchParams = request.nextUrl.searchParams

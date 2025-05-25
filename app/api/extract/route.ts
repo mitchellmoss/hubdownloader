@@ -148,5 +148,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Also export the results map for the GET endpoint
-export { extractionResults }
+// Remove this export - it's not a valid Next.js route export

@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { rateLimitMiddleware, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit-middleware'
+import { checkRateLimit, createRateLimitResponse } from '@/lib/simple-rate-limit'
 
 const proxySchema = z.object({
   url: z.string().url(),
 })
 
 export async function POST(request: NextRequest) {
-  // Check rate limit for proxy endpoint
-  const rateLimitResponse = await rateLimitMiddleware(request, RATE_LIMIT_CONFIGS.proxy)
-  if (rateLimitResponse) {
-    return rateLimitResponse
+  // Check rate limit (30 requests per minute for proxy)
+  const rateLimit = await checkRateLimit(request, 30, 60000)
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(
+      'Too many proxy requests. Please wait before trying again.',
+      rateLimit.resetAt
+    )
   }
 
   try {
