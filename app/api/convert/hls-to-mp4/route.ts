@@ -82,7 +82,9 @@ export async function POST(request: NextRequest) {
       
       // Schedule cleanup after a delay to allow download
       setTimeout(() => {
-        cleanupHLSDownload(outputFile).catch(console.error)
+        if (outputFile) {
+          cleanupHLSDownload(outputFile).catch(console.error)
+        }
       }, 3600000) // Clean up after 1 hour
       
       return NextResponse.json(response)
