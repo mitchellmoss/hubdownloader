@@ -11,6 +11,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/faq',
     '/examples',
     '/hls-guide',
+    '/privacy',
+    '/terms',
+    '/dmca',
   ]
   
   return routes.map((route) => ({
