@@ -64,6 +64,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the application.
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`: Google Analytics ID (optional)
 - `PRESIGNED_URL_SECRET`: Secret key for signing presigned URLs (required for production)
 - `DIRECT_DOWNLOAD_DOMAIN`: Domain for direct file downloads (e.g., dl.lyricless.com)
+- `NEXT_PUBLIC_SITE_URL`: Main site URL for OG images and metadata (e.g., https://lyricless.app)
 
 ## Scripts
 
