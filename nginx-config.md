@@ -66,8 +66,30 @@ server {
     
     # Legacy download endpoint (for backwards compatibility)
     location /download {
-        # Redirect to the new endpoint
-        return 301 /api/download/presigned$is_args$args;
+        # Same configuration as /api/download/presigned
+        limit_req zone=presigned_limit burst=10 nodelay;
+        limit_req_status 429;
+        
+        add_header X-RateLimit-Limit "30" always;
+        add_header X-RateLimit-Remaining $limit_req_remaining always;
+        add_header X-RateLimit-Reset $limit_req_reset always;
+        
+        # Proxy to Next.js presigned endpoint
+        proxy_pass http://nextjs_app/api/download/presigned$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        proxy_buffering off;
+        proxy_request_buffering off;
+        
+        add_header Accept-Ranges bytes always;
+        add_header Cache-Control "public, max-age=3600" always;
     }
     
     # Main download endpoint for presigned URLs
