@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validatePresignedUrl } from '@/lib/presigned-urls'
+import { createReadStream } from 'fs'
+import { stat } from 'fs/promises'
+import { existsSync } from 'fs'
 
 // Mark this route as dynamic to prevent static generation
 export const dynamic = 'force-dynamic'
@@ -68,16 +71,68 @@ export async function GET(request: NextRequest) {
       })
       
     } else {
-      // For local files (e.g., converted MP4s), we would serve them directly
-      // This would require file system access on the direct download server
-      // For now, return an error as this needs server-specific implementation
-      return NextResponse.json(
-        { 
-          error: 'Local file serving not implemented',
-          note: 'This endpoint needs to be configured on the direct download server'
-        },
-        { status: 501 }
-      )
+      // For local files (e.g., converted MP4s), serve them directly
+      try {
+        // Check if file exists
+        if (!existsSync(filePath)) {
+          return NextResponse.json(
+            { error: 'File not found' },
+            { status: 404 }
+          )
+        }
+        
+        // Get actual file stats
+        const stats = await stat(filePath)
+        
+        // Create read stream
+        const fileStream = createReadStream(filePath)
+        const stream = new ReadableStream({
+          async start(controller) {
+            fileStream.on('data', (chunk) => {
+              controller.enqueue(chunk)
+            })
+            
+            fileStream.on('end', () => {
+              controller.close()
+            })
+            
+            fileStream.on('error', (error) => {
+              console.error('File streaming error:', error)
+              controller.error(error)
+            })
+          },
+          
+          cancel() {
+            fileStream.destroy()
+          }
+        })
+        
+        // Determine content type based on file extension
+        const ext = filePath.split('.').pop()?.toLowerCase()
+        const contentType = ext === 'mp4' ? 'video/mp4' : 
+                          ext === 'webm' ? 'video/webm' : 
+                          'application/octet-stream'
+        
+        // Extract filename
+        const filename = filePath.split('/').pop() || 'download'
+        
+        return new NextResponse(stream, {
+          headers: {
+            'Content-Type': contentType,
+            'Content-Disposition': `attachment; filename="${filename}"`,
+            'Content-Length': stats.size.toString(),
+            'Cache-Control': 'public, max-age=3600',
+            'Accept-Ranges': 'bytes',
+            'Access-Control-Allow-Origin': '*',
+          },
+        })
+      } catch (error) {
+        console.error('Error serving local file:', error)
+        return NextResponse.json(
+          { error: 'Failed to serve file' },
+          { status: 500 }
+        )
+      }
     }
     
   } catch (error) {
