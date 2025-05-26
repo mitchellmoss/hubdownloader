@@ -8,6 +8,10 @@ The split architecture uses two domains:
 - `app.lyricless.com` - Main application (protected by Cloudflare Tunnel)
 - `dl.lyricless.com` - Direct downloads (bypasses Cloudflare for performance)
 
+This configuration assumes:
+- Next.js app is running on a separate server at `192.168.86.133:3000`
+- Nginx server handles direct downloads and proxies presigned URL validation to Next.js
+
 ## Full Nginx Configuration
 
 Create this configuration at `/etc/nginx/sites-available/dl.lyricless.com`:
@@ -17,9 +21,9 @@ Create this configuration at `/etc/nginx/sites-available/dl.lyricless.com`:
 limit_req_zone $binary_remote_addr zone=presigned_limit:10m rate=30r/m;
 limit_req_zone $binary_remote_addr zone=download_limit:10m rate=100r/m;
 
-# Upstream for Next.js application (for presigned URL validation)
+# Upstream for Next.js application (running on separate server)
 upstream nextjs_app {
-    server localhost:3000;
+    server 192.168.86.133:3000;
     keepalive 64;
 }
 
@@ -172,7 +176,7 @@ location /api/download/presigned {
     proxy_buffering off;
 }
 ```
-- Proxies to Next.js application for URL validation
+- Proxies to Next.js application (at 192.168.86.133:3000) for URL validation
 - Disables buffering for real-time streaming
 - Adds rate limiting with burst protection
 
@@ -199,36 +203,48 @@ add_header Cache-Control "public, max-age=3600";
 
 ## Installation Steps
 
-1. **Create the configuration file:**
+1. **Ensure network connectivity:**
+```bash
+# Test connectivity to Next.js server
+curl http://192.168.86.133:3000/health
+```
+
+2. **Create the configuration file:**
 ```bash
 sudo nano /etc/nginx/sites-available/dl.lyricless.com
 # Paste the configuration above
 ```
 
-2. **Enable the site:**
+3. **Enable the site:**
 ```bash
 sudo ln -s /etc/nginx/sites-available/dl.lyricless.com /etc/nginx/sites-enabled/
 ```
 
-3. **Test the configuration:**
+4. **Test the configuration:**
 ```bash
 sudo nginx -t
 ```
 
-4. **Create directories for file storage:**
+5. **Create directories for file storage:**
 ```bash
 sudo mkdir -p /var/www/lyricless/converted
 sudo chown -R www-data:www-data /var/www/lyricless
 ```
 
-5. **Reload Nginx:**
+6. **Reload Nginx:**
 ```bash
 sudo systemctl reload nginx
 ```
 
-6. **Set up SSL with Certbot:**
+7. **Set up SSL with Certbot:**
 ```bash
 sudo certbot --nginx -d dl.lyricless.com
+```
+
+8. **Configure firewall (if applicable):**
+```bash
+# Allow Nginx to connect to Next.js server
+sudo ufw allow from any to 192.168.86.133 port 3000
 ```
 
 ## Integration with Next.js
@@ -296,3 +312,14 @@ location ~* \.(mp4|webm|m4v)$ {
    - Maintain presigned URL validation
 
 This configuration provides a secure, performant solution for serving large video files while maintaining the benefits of Cloudflare Tunnel protection for the main application.
+
+## Network Architecture Summary
+
+```
+Internet -> Cloudflare Tunnel -> app.lyricless.com -> Next.js (192.168.86.133:3000)
+Internet -> dl.lyricless.com -> Nginx -> Next.js (192.168.86.133:3000) for validation
+                                      -> Local files (X-Accel-Redirect)
+                                      -> Remote proxy for validated downloads
+```
+
+The Next.js application at 192.168.86.133:3000 handles all business logic, while the Nginx server on dl.lyricless.com handles efficient file delivery for large downloads.
