@@ -198,11 +198,35 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {analytics.extractionsByDay.slice(0, 10).map((day) => {
-                  const date = new Date(day.date + 'T00:00:00');
+                  let formattedDate = 'Invalid Date';
+                  try {
+                    // Handle various date formats from SQLite
+                    if (day.date) {
+                      // Try parsing the date string directly first
+                      let date = new Date(day.date);
+                      
+                      // If invalid, try adding time component
+                      if (isNaN(date.getTime())) {
+                        date = new Date(day.date + 'T00:00:00');
+                      }
+                      
+                      // If still invalid, try parsing as ISO string
+                      if (isNaN(date.getTime())) {
+                        date = new Date(day.date.replace(' ', 'T'));
+                      }
+                      
+                      if (!isNaN(date.getTime())) {
+                        formattedDate = format(date, 'MMM dd, yyyy');
+                      }
+                    }
+                  } catch (e) {
+                    console.error('Date parsing error:', e, 'for date:', day.date);
+                  }
+                  
                   const successRate = day.count > 0 ? ((day.successful / day.count) * 100).toFixed(1) : '0';
                   return (
-                    <tr key={day.date} className="border-b border-gray-700">
-                      <td className="py-2">{format(date, 'MMM dd, yyyy')}</td>
+                    <tr key={day.date || 'unknown'} className="border-b border-gray-700">
+                      <td className="py-2">{formattedDate}</td>
                       <td className="py-2">{day.count}</td>
                       <td className="py-2 text-green-400">{day.successful}</td>
                       <td className="py-2 text-red-400">{day.failed}</td>
