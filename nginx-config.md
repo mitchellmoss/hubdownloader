@@ -6,7 +6,7 @@ This document explains the Nginx configuration needed for the direct download se
 
 The split architecture uses two domains:
 - `app.lyricless.com` - Main application (protected by Cloudflare Tunnel)
-- `dl.lyricless.com` - Direct downloads (bypasses Cloudflare for performance)
+- `dl.lyricless.app` - Direct downloads (bypasses Cloudflare for performance)
 
 This configuration assumes:
 - Next.js app is running on a separate server at `192.168.86.133:3000`
@@ -14,7 +14,7 @@ This configuration assumes:
 
 ## Full Nginx Configuration
 
-Create this configuration at `/etc/nginx/sites-available/dl.lyricless.com`:
+Create this configuration at `/etc/nginx/sites-available/dl.lyricless.app`:
 
 ```nginx
 # Rate limiting zones
@@ -29,7 +29,7 @@ upstream nextjs_app {
 
 server {
     listen 80;
-    server_name dl.lyricless.com;
+    server_name dl.lyricless.app;
     
     # Redirect HTTP to HTTPS
     return 301 https://$server_name$request_uri;
@@ -37,11 +37,11 @@ server {
 
 server {
     listen 443 ssl http2;
-    server_name dl.lyricless.com;
+    server_name dl.lyricless.app;
     
     # SSL Configuration (managed by Certbot)
-    ssl_certificate /etc/letsencrypt/live/dl.lyricless.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/dl.lyricless.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/dl.lyricless.app/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/dl.lyricless.app/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
     
@@ -52,8 +52,8 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     
     # Logging
-    access_log /var/log/nginx/dl.lyricless.com.access.log;
-    error_log /var/log/nginx/dl.lyricless.com.error.log;
+    access_log /var/log/nginx/dl.lyricless.app.access.log;
+    error_log /var/log/nginx/dl.lyricless.app.error.log;
     
     # Client body size limit (for large file uploads if needed)
     client_max_body_size 5G;
@@ -63,6 +63,12 @@ server {
     proxy_send_timeout 600s;
     proxy_read_timeout 600s;
     send_timeout 600s;
+    
+    # Legacy download endpoint (for backwards compatibility)
+    location /download {
+        # Redirect to the new endpoint
+        return 301 /api/download/presigned$is_args$args;
+    }
     
     # Main download endpoint for presigned URLs
     location /api/download/presigned {
@@ -162,8 +168,8 @@ limit_req_zone $binary_remote_addr zone=download_limit:10m rate=100r/m;
 
 ### 2. SSL Configuration
 ```nginx
-ssl_certificate /etc/letsencrypt/live/dl.lyricless.com/fullchain.pem;
-ssl_certificate_key /etc/letsencrypt/live/dl.lyricless.com/privkey.pem;
+ssl_certificate /etc/letsencrypt/live/dl.lyricless.app/fullchain.pem;
+ssl_certificate_key /etc/letsencrypt/live/dl.lyricless.app/privkey.pem;
 ```
 - Uses Let's Encrypt certificates
 - Includes modern SSL security settings
@@ -211,13 +217,13 @@ curl http://192.168.86.133:3000/health
 
 2. **Create the configuration file:**
 ```bash
-sudo nano /etc/nginx/sites-available/dl.lyricless.com
+sudo nano /etc/nginx/sites-available/dl.lyricless.app
 # Paste the configuration above
 ```
 
 3. **Enable the site:**
 ```bash
-sudo ln -s /etc/nginx/sites-available/dl.lyricless.com /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/dl.lyricless.app /etc/nginx/sites-enabled/
 ```
 
 4. **Test the configuration:**
@@ -238,7 +244,7 @@ sudo systemctl reload nginx
 
 7. **Set up SSL with Certbot:**
 ```bash
-sudo certbot --nginx -d dl.lyricless.com
+sudo certbot --nginx -d dl.lyricless.app
 ```
 
 8. **Configure firewall (if applicable):**
@@ -278,13 +284,13 @@ return new NextResponse(null, {
 ## Monitoring
 
 Monitor these log files:
-- Access logs: `/var/log/nginx/dl.lyricless.com.access.log`
-- Error logs: `/var/log/nginx/dl.lyricless.com.error.log`
+- Access logs: `/var/log/nginx/dl.lyricless.app.access.log`
+- Error logs: `/var/log/nginx/dl.lyricless.app.error.log`
 
 Use tools like GoAccess for real-time log analysis:
 ```bash
 sudo apt-get install goaccess
-goaccess /var/log/nginx/dl.lyricless.com.access.log -o /var/www/html/report.html --real-time-html
+goaccess /var/log/nginx/dl.lyricless.app.access.log -o /var/www/html/report.html --real-time-html
 ```
 
 ## Performance Tuning
@@ -307,7 +313,7 @@ location ~* \.(mp4|webm|m4v)$ {
 ```
 
 3. **Use CDN for global distribution:**
-   - Configure dl.lyricless.com as origin
+   - Configure dl.lyricless.app as origin
    - Set up geographic CDN endpoints
    - Maintain presigned URL validation
 
@@ -317,9 +323,9 @@ This configuration provides a secure, performant solution for serving large vide
 
 ```
 Internet -> Cloudflare Tunnel -> app.lyricless.com -> Next.js (192.168.86.133:3000)
-Internet -> dl.lyricless.com -> Nginx -> Next.js (192.168.86.133:3000) for validation
+Internet -> dl.lyricless.app -> Nginx -> Next.js (192.168.86.133:3000) for validation
                                       -> Local files (X-Accel-Redirect)
                                       -> Remote proxy for validated downloads
 ```
 
-The Next.js application at 192.168.86.133:3000 handles all business logic, while the Nginx server on dl.lyricless.com handles efficient file delivery for large downloads.
+The Next.js application at 192.168.86.133:3000 handles all business logic, while the Nginx server on dl.lyricless.app handles efficient file delivery for large downloads.

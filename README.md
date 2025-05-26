@@ -63,7 +63,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the application.
 - `NEXT_PUBLIC_ADSENSE_PUBLISHER_ID`: Google AdSense publisher ID (optional)
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`: Google Analytics ID (optional)
 - `PRESIGNED_URL_SECRET`: Secret key for signing presigned URLs (required for production)
-- `DIRECT_DOWNLOAD_DOMAIN`: Domain for direct file downloads (e.g., dl.lyricless.com)
+- `DIRECT_DOWNLOAD_DOMAIN`: Domain for direct file downloads (e.g., dl.lyricless.app)
 - `NEXT_PUBLIC_SITE_URL`: Main site URL for OG images and metadata (e.g., https://lyricless.app)
 
 ## Scripts
@@ -115,7 +115,7 @@ npm run build
 ```bash
 # Generate a secure random string for PRESIGNED_URL_SECRET
 export PRESIGNED_URL_SECRET=$(openssl rand -base64 32)
-export DIRECT_DOWNLOAD_DOMAIN=dl.lyricless.com
+export DIRECT_DOWNLOAD_DOMAIN=dl.lyricless.app
 ```
 
 5. Configure Cloudflare Tunnel:
@@ -149,9 +149,9 @@ sudo systemctl start cloudflared
 sudo apt-get install -y nginx
 
 # Configure Nginx (see nginx-config.md for full configuration)
-sudo nano /etc/nginx/sites-available/dl.lyricless.com
+sudo nano /etc/nginx/sites-available/dl.lyricless.app
 # Add configuration from nginx-config.md
-sudo ln -s /etc/nginx/sites-available/dl.lyricless.com /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/dl.lyricless.app /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -160,7 +160,7 @@ sudo systemctl reload nginx
 ```
 # In your DNS provider:
 # A record: app.lyricless.com → Cloudflare Tunnel (handled by Cloudflare)
-# A record: dl.lyricless.com → Your server's IP (bypasses Cloudflare)
+# A record: dl.lyricless.app → Your server's IP (bypasses Cloudflare)
 ```
 
 8. Start the application with PM2:
@@ -173,7 +173,7 @@ pm2 startup
 9. Set up SSL for direct download domain:
 ```bash
 sudo apt-get install certbot python3-certbot-nginx
-sudo certbot --nginx -d dl.lyricless.com
+sudo certbot --nginx -d dl.lyricless.app
 ```
 
 ### Architecture Benefits

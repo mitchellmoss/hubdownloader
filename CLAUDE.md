@@ -340,7 +340,7 @@ Implement Cloudflare Tunnel to protect server IP while bypassing the tunnel for 
 #### 1. Dual-Endpoint Architecture
 ```
 Main Domain (via CF Tunnel): app.lyricless.com
-Direct Download Domain: dl.lyricless.com (bypasses tunnel)
+Direct Download Domain: dl.lyricless.app (bypasses tunnel)
 ```
 
 #### 2. Modified API Response Structure
@@ -379,7 +379,7 @@ if (fileSize > LARGE_FILE_THRESHOLD) {
 ```nginx
 server {
   listen 443 ssl;
-  server_name dl.lyricless.com;
+  server_name dl.lyricless.app;
   
   location /download {
     # Validate presigned URL
@@ -407,17 +407,17 @@ server {
 1. **Environment Variables**
    ```bash
    PRESIGNED_URL_SECRET=<generate-secure-random-string>
-   DIRECT_DOWNLOAD_DOMAIN=dl.lyricless.com
+   DIRECT_DOWNLOAD_DOMAIN=dl.lyricless.app
    ```
 
 2. **DNS Configuration**
    - Point `app.lyricless.com` to Cloudflare Tunnel
-   - Point `dl.lyricless.com` directly to server IP (bypass Cloudflare)
+   - Point `dl.lyricless.app` directly to server IP (bypass Cloudflare)
 
 3. **Nginx Setup**
    - Install nginx on direct download server
    - Apply configuration from `nginx-config.md`
-   - Set up SSL certificates for `dl.lyricless.com`
+   - Set up SSL certificates for `dl.lyricless.app`
 
 4. **Testing**
    - Test small file downloads through tunnel

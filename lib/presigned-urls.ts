@@ -54,7 +54,7 @@ export function generatePresignedUrl({
   
   // Use HTTPS protocol
   const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-  return `${protocol}://${DIRECT_DOWNLOAD_DOMAIN}/download?${params.toString()}`;
+  return `${protocol}://${DIRECT_DOWNLOAD_DOMAIN}/api/download/presigned?${params.toString()}`;
 }
 
 /**
