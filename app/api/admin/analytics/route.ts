@@ -118,12 +118,27 @@ export async function GET(req: NextRequest) {
       WHERE createdAt >= ${startDate}
     ` as any[];
 
+    // Convert BigInt values to numbers in raw query results
+    const convertBigInt = (obj: any): any => {
+      if (obj === null || obj === undefined) return obj;
+      if (typeof obj === 'bigint') return Number(obj);
+      if (Array.isArray(obj)) return obj.map(convertBigInt);
+      if (typeof obj === 'object') {
+        const converted: any = {};
+        for (const key in obj) {
+          converted[key] = convertBigInt(obj[key]);
+        }
+        return converted;
+      }
+      return obj;
+    };
+
     return NextResponse.json({
       summary: {
         totalExtractions,
         successRate: successRate.toFixed(2),
         failedExtractions,
-        uniqueUsers: uniqueIps[0]?.count || 0,
+        uniqueUsers: convertBigInt(uniqueIps[0])?.count || 0,
         dateRange: {
           start: startDate.toISOString(),
           end: new Date().toISOString(),
@@ -131,9 +146,9 @@ export async function GET(req: NextRequest) {
         }
       },
       recentExtractions,
-      extractionsByDay,
-      extractionsByDomain,
-      extractionsByFormat,
+      extractionsByDay: convertBigInt(extractionsByDay),
+      extractionsByDomain: convertBigInt(extractionsByDomain),
+      extractionsByFormat: convertBigInt(extractionsByFormat),
       rateLimitStats: {
         activeRateLimits: rateLimitStats.length,
         details: rateLimitStats
