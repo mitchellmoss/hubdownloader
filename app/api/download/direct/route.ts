@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit, createRateLimitResponse } from '@/lib/simple-rate-limit'
+import { createFileRoutingDecision, estimateFileSize, createDownloadResponse } from '@/lib/file-routing'
+import { createPresignedUrlResponse } from '@/lib/presigned-urls'
 
 export async function GET(request: NextRequest) {
   // Check rate limit (20 requests per minute for downloads)
@@ -65,7 +67,36 @@ export async function GET(request: NextRequest) {
       referer = 'https://xhamster.com/'
     }
     
-    // Fetch the video with appropriate headers
+    // First, make a HEAD request to get file size without downloading
+    const headResponse = await fetch(url, {
+      method: 'HEAD',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        ...(referer && { 'Referer': referer }),
+      },
+    })
+    
+    // Get file size from headers
+    const fileSize = estimateFileSize(headResponse.headers)
+    
+    // Determine routing based on file size
+    const { shouldUseDirect, decision } = createFileRoutingDecision(fileSize, filename, headResponse.headers)
+    
+    console.log(`File routing decision for ${filename}: ${decision.method} (${decision.reason})`)
+    
+    // If file should be served directly, return presigned URL
+    if (shouldUseDirect) {
+      return NextResponse.json(
+        createPresignedUrlResponse(
+          url, // Using URL as file path for remote files
+          fileSize,
+          url,
+          filename
+        )
+      )
+    }
+    
+    // For small files, continue with streaming through tunnel
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

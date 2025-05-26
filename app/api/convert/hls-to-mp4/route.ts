@@ -4,6 +4,8 @@ import { createReadStream } from 'fs'
 import { stat } from 'fs/promises'
 import { downloadHLSToMP4, cleanupHLSDownload } from '@/lib/hls-downloader'
 import { checkRateLimit, createRateLimitResponse } from '@/lib/simple-rate-limit'
+import { createFileRoutingDecision, LARGE_FILE_THRESHOLD } from '@/lib/file-routing'
+import { createPresignedUrlResponse } from '@/lib/presigned-urls'
 
 const convertSchema = z.object({
   url: z.string().url(),
@@ -62,7 +64,31 @@ export async function POST(request: NextRequest) {
     const stats = await stat(outputFile)
     console.log(`Conversion complete. File size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`)
     
-    // Stream the file to the response
+    // Determine routing based on file size
+    const { shouldUseDirect, decision } = createFileRoutingDecision(stats.size, outputFile)
+    
+    console.log(`File routing decision for converted MP4: ${decision.method} (${decision.reason})`)
+    
+    // If file should be served directly, return presigned URL
+    if (shouldUseDirect) {
+      // Note: In production, the outputFile path should be accessible by the direct download server
+      // For now, we'll return the metadata and let the client handle it
+      const response = createPresignedUrlResponse(
+        outputFile,
+        stats.size,
+        sourceUrl || url,
+        'video.mp4'
+      )
+      
+      // Schedule cleanup after a delay to allow download
+      setTimeout(() => {
+        cleanupHLSDownload(outputFile).catch(console.error)
+      }, 3600000) // Clean up after 1 hour
+      
+      return NextResponse.json(response)
+    }
+    
+    // For small files, continue with streaming through tunnel
     const fileStream = createReadStream(outputFile)
     const stream = new ReadableStream({
       async start(controller) {

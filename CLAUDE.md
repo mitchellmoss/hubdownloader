@@ -282,3 +282,145 @@ npm start
 - [ ] Mobile responsive design
 - [ ] Error handling for invalid URLs
 - [ ] Quality-specific downloads (480p, 720p, 1080p)
+
+## Cloudflare Tunnel Implementation Plan
+
+### Overview
+Implement Cloudflare Tunnel to protect server IP while bypassing the tunnel for large file downloads to improve performance and reduce bandwidth costs.
+
+### Architecture
+**Protected by Cloudflare Tunnel:**
+- API endpoints (`/api/extract`, `/api/extract/[id]`)
+- Metadata and small responses
+- Web pages and UI assets
+- Authentication and rate limiting
+
+**Bypassing Cloudflare Tunnel (Direct Access):**
+- Large video file downloads
+- HLS segment downloads (.ts files)
+- Converted MP4 files
+- Any file > 10MB (configurable threshold)
+
+### Implementation Status ✅
+- [x] Create architecture for split traffic routing (CF Tunnel vs direct)
+- [x] Implement presigned URL system for large file downloads
+- [x] Create separate subdomain/endpoint for direct file serving
+- [x] Modify download endpoints to return redirect URLs instead of streams
+- [x] Implement nginx configuration for direct file serving
+- [x] Update client-side download logic to handle redirects
+- [x] Add file size detection and routing logic
+
+### Implemented Features
+1. **Presigned URL System** (`lib/presigned-urls.ts`)
+   - HMAC-based URL signing with SHA-256
+   - Configurable expiration (default 1 hour)
+   - Secure validation with timing attack protection
+   - Metadata embedding (file path, size, referer)
+
+2. **File Routing Logic** (`lib/file-routing.ts`)
+   - Automatic routing based on file size (10MB threshold)
+   - Special handling for HLS/DASH streams
+   - File size estimation for remote URLs
+   - Format detection utilities
+
+3. **Updated API Endpoints**
+   - `/api/download/direct` - Returns presigned URLs for large files
+   - `/api/proxy/hls` - Always uses presigned URLs for HLS streams
+   - `/api/convert/hls-to-mp4` - Routes based on converted file size
+   - `/api/download/presigned` - Validates and serves presigned downloads
+
+4. **Client-Side Integration** (`lib/download-client.ts`)
+   - Automatic detection of response type
+   - Seamless handling of both streaming and presigned URLs
+   - Backwards compatibility with legacy endpoints
+   - Updated HLSDownloader component
+
+### Technical Details
+
+#### 1. Dual-Endpoint Architecture
+```
+Main Domain (via CF Tunnel): app.lyricless.com
+Direct Download Domain: dl.lyricless.com (bypasses tunnel)
+```
+
+#### 2. Modified API Response Structure
+Instead of streaming files directly, API endpoints return metadata with presigned URLs:
+```typescript
+// Current: Stream file directly
+return new NextResponse(stream)
+
+// New: Return download metadata
+return NextResponse.json({
+  downloadUrl: generatePresignedUrl(fileInfo),
+  expires: Date.now() + 3600000, // 1 hour
+  size: fileSize,
+  filename: suggestedFilename
+})
+```
+
+#### 3. Presigned URL System
+- Time-limited URLs with HMAC signatures
+- Include expiry time and file metadata
+- Validate on direct download server
+- Prevent hotlinking and abuse
+
+#### 4. File Size Detection Logic
+```typescript
+const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024; // 10MB
+
+if (fileSize > LARGE_FILE_THRESHOLD) {
+  return { method: 'direct', url: createDirectUrl() };
+} else {
+  return { method: 'tunnel', stream: fileStream };
+}
+```
+
+#### 5. Nginx Configuration for Direct Server
+```nginx
+server {
+  listen 443 ssl;
+  server_name dl.lyricless.com;
+  
+  location /download {
+    # Validate presigned URL
+    # Serve file directly
+    # Add proper headers for video streaming
+  }
+}
+```
+
+### Security Considerations
+- Presigned URLs expire after 1 hour
+- Include referer validation for adult sites
+- Rate limit presigned URL generation
+- Log all direct download requests
+- Implement IP-based abuse detection
+- Validate signatures server-side before serving files
+
+### Benefits
+1. **IP Protection**: Main application remains behind Cloudflare
+2. **Performance**: Large files bypass CF's processing overhead
+3. **Cost Savings**: Reduced Cloudflare bandwidth usage
+4. **Scalability**: Can add CDN or multiple direct servers later
+
+### Production Deployment Steps
+1. **Environment Variables**
+   ```bash
+   PRESIGNED_URL_SECRET=<generate-secure-random-string>
+   DIRECT_DOWNLOAD_DOMAIN=dl.lyricless.com
+   ```
+
+2. **DNS Configuration**
+   - Point `app.lyricless.com` to Cloudflare Tunnel
+   - Point `dl.lyricless.com` directly to server IP (bypass Cloudflare)
+
+3. **Nginx Setup**
+   - Install nginx on direct download server
+   - Apply configuration from `nginx-config.md`
+   - Set up SSL certificates for `dl.lyricless.com`
+
+4. **Testing**
+   - Test small file downloads through tunnel
+   - Test large file downloads through direct domain
+   - Verify presigned URL expiration
+   - Check referer validation for adult sites

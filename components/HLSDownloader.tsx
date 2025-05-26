@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Download, Loader2, AlertCircle, FileVideo } from 'lucide-react'
+import { handleDownloadResponse, initiateDownload } from '@/lib/download-client'
 
 interface HLSDownloaderProps {
   url: string
@@ -50,18 +51,14 @@ export default function HLSDownloader({ url, quality, sourceUrl }: HLSDownloader
         throw new Error('Failed to download stream')
       }
 
-      // Get the blob
-      const blob = await downloadResponse.blob()
+      // Handle the new response format
+      const downloadData = await handleDownloadResponse(downloadResponse)
       
-      // Create download link
-      const downloadUrl = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = downloadUrl
-      a.download = `video_${quality || 'best'}.ts`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(downloadUrl)
-      document.body.removeChild(a)
+      // Update filename with quality
+      downloadData.filename = `video_${quality || 'best'}.ts`
+      
+      // Initiate the download
+      await initiateDownload(downloadData)
       
       setProgress(100)
     } catch (err) {
@@ -93,18 +90,14 @@ export default function HLSDownloader({ url, quality, sourceUrl }: HLSDownloader
         throw new Error(errorData.error || 'Conversion failed')
       }
 
-      // Get the blob
-      const blob = await response.blob()
+      // Handle the new response format
+      const downloadData = await handleDownloadResponse(response)
       
-      // Create download link
-      const downloadUrl = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = downloadUrl
-      a.download = `video_${quality || 'best'}.mp4`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(downloadUrl)
-      document.body.removeChild(a)
+      // Update filename with quality
+      downloadData.filename = `video_${quality || 'best'}.mp4`
+      
+      // Initiate the download
+      await initiateDownload(downloadData)
       
     } catch (err) {
       console.error('Conversion error:', err)

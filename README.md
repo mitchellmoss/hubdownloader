@@ -62,6 +62,8 @@ Open [http://localhost:3000](http://localhost:3000) to see the application.
 - `DATABASE_URL`: SQLite database connection string
 - `NEXT_PUBLIC_ADSENSE_PUBLISHER_ID`: Google AdSense publisher ID (optional)
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`: Google Analytics ID (optional)
+- `PRESIGNED_URL_SECRET`: Secret key for signing presigned URLs (required for production)
+- `DIRECT_DOWNLOAD_DOMAIN`: Domain for direct file downloads (e.g., dl.lyricless.com)
 
 ## Scripts
 
@@ -74,28 +76,33 @@ Open [http://localhost:3000](http://localhost:3000) to see the application.
 
 ## Production Deployment
 
-### VPS Deployment (Recommended)
+### VPS Deployment with Cloudflare Tunnel (Recommended)
+
+This deployment uses a dual-architecture approach: Cloudflare Tunnel protects the main application while large file downloads bypass the tunnel for better performance.
 
 1. Set up a VPS with at least 4GB RAM (DigitalOcean, Linode, etc.)
 
-2. Install Node.js and PM2:
+2. Install Node.js, PM2, and system dependencies:
 ```bash
+# Node.js
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 sudo apt-get install -y nodejs
 sudo npm install -g pm2
-```
 
-3. Install Chrome dependencies for Puppeteer:
-```bash
+# Chrome for Puppeteer
 sudo apt-get update
 sudo apt-get install -y wget gnupg
 wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
 sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'
 sudo apt-get update
 sudo apt-get install -y google-chrome-stable
+
+# Video processing tools (optional but recommended)
+sudo apt-get install -y ffmpeg
+pip install yt-dlp
 ```
 
-4. Clone and build the project:
+3. Clone and build the project:
 ```bash
 git clone https://github.com/yourusername/lyricless.git
 cd lyricless
@@ -103,37 +110,77 @@ npm install
 npm run build
 ```
 
-5. Start with PM2:
+4. Set up environment variables:
+```bash
+# Generate a secure random string for PRESIGNED_URL_SECRET
+export PRESIGNED_URL_SECRET=$(openssl rand -base64 32)
+export DIRECT_DOWNLOAD_DOMAIN=dl.lyricless.com
+```
+
+5. Configure Cloudflare Tunnel:
+```bash
+# Install cloudflared
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+sudo mv cloudflared /usr/local/bin
+sudo chmod +x /usr/local/bin/cloudflared
+
+# Login to Cloudflare
+cloudflared tunnel login
+
+# Create tunnel
+cloudflared tunnel create lyricless
+
+# Configure tunnel (create config.yml)
+cat > ~/.cloudflared/config.yml << EOF
+url: http://localhost:3000
+tunnel: <your-tunnel-id>
+credentials-file: /home/user/.cloudflared/<tunnel-id>.json
+EOF
+
+# Run tunnel as service
+sudo cloudflared service install
+sudo systemctl start cloudflared
+```
+
+6. Set up Nginx for direct downloads (bypassing Cloudflare):
+```bash
+# Install Nginx
+sudo apt-get install -y nginx
+
+# Configure Nginx (see nginx-config.md for full configuration)
+sudo nano /etc/nginx/sites-available/dl.lyricless.com
+# Add configuration from nginx-config.md
+sudo ln -s /etc/nginx/sites-available/dl.lyricless.com /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+7. Configure DNS:
+```
+# In your DNS provider:
+# A record: app.lyricless.com → Cloudflare Tunnel (handled by Cloudflare)
+# A record: dl.lyricless.com → Your server's IP (bypasses Cloudflare)
+```
+
+8. Start the application with PM2:
 ```bash
 pm2 start npm --name "lyricless" -- start
 pm2 save
 pm2 startup
 ```
 
-6. Set up Nginx as reverse proxy:
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-```
-
-7. Set up SSL with Let's Encrypt:
+9. Set up SSL for direct download domain:
 ```bash
 sudo apt-get install certbot python3-certbot-nginx
-sudo certbot --nginx -d yourdomain.com
+sudo certbot --nginx -d dl.lyricless.com
 ```
+
+### Architecture Benefits
+
+- **IP Protection**: Main app (app.lyricless.com) is protected by Cloudflare
+- **Performance**: Large files (>10MB) bypass Cloudflare for faster downloads
+- **Cost Savings**: Reduced Cloudflare bandwidth usage
+- **Scalability**: Can add CDN or multiple direct servers later
 
 ## Security Considerations
 
