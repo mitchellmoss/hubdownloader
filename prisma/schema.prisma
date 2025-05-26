@@ -12,12 +12,16 @@ model Extraction {
   sourceUrl   String
   videoCount  Int
   videos      String   // JSON string of video URLs
+  format      String?  // Detected video format (mp4, hls, etc)
+  success     Boolean  @default(true)
+  error       String?  // Error message if failed
   userIp      String?
   userAgent   String?
   createdAt   DateTime @default(now())
   
   @@index([createdAt])
   @@index([userIp])
+  @@index([success])
 }
 
 model Analytics {
@@ -34,11 +38,12 @@ model Analytics {
 
 model RateLimit {
   id          String   @id @default(cuid())
-  identifier  String   @unique // IP address or user ID
+  key         String   @unique // Rate limit key (e.g., "extract_192.168.1.1")
   count       Int      @default(0)
-  window      DateTime
+  expiresAt   DateTime
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  @@index([identifier, window])
+  @@index([key])
+  @@index([expiresAt])
 }

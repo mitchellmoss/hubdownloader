@@ -29,6 +29,10 @@ const extractSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  // Declare variables at function scope for error tracking
+  let id: string | undefined
+  let url: string | undefined
+  
   try {
     // Check rate limit (10 requests per minute)
     const rateLimit = await checkRateLimit(request, 10, 60000)
@@ -42,13 +46,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     // Validate input
-    const { url } = extractSchema.parse(body)
+    const parsed = extractSchema.parse(body)
+    url = parsed.url
     
     // Generate unique ID
-    const id = nanoid()
+    id = nanoid()
     
     // Extract video URLs
-    let videos: Array<{ url: string; quality?: string; type?: string }> = []
+    let videos: Array<{ url: string; quality?: string; type?: string; isHLS?: boolean }> = []
     
     // Check if it's YouTube
     const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
@@ -108,6 +113,23 @@ export async function POST(request: NextRequest) {
                'unknown'
     const userAgent = request.headers.get('user-agent') || 'unknown'
     
+    // Detect video format
+    let format: string | null = null
+    if (videos.length > 0) {
+      const firstVideo = videos[0]
+      if (firstVideo.isHLS || firstVideo.url.includes('.m3u8')) {
+        format = 'hls'
+      } else if (firstVideo.url.includes('.mpd')) {
+        format = 'dash'
+      } else if (firstVideo.url.includes('.mp4')) {
+        format = 'mp4'
+      } else if (firstVideo.url.includes('.webm')) {
+        format = 'webm'
+      } else {
+        format = 'other'
+      }
+    }
+    
     // Store in database
     const extraction = await prisma.extraction.create({
       data: {
@@ -115,6 +137,8 @@ export async function POST(request: NextRequest) {
         sourceUrl: url,
         videoCount: videos.length,
         videos: JSON.stringify(videos),
+        format,
+        success: true,
         userIp: ip,
         userAgent,
       },
@@ -125,6 +149,32 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('Extraction error:', error)
+    
+    // Try to save failed extraction to database
+    try {
+      if (id && url) {
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                   request.headers.get('x-real-ip') || 
+                   'unknown'
+        const userAgent = request.headers.get('user-agent') || 'unknown'
+        
+        await prisma.extraction.create({
+          data: {
+            id,
+            sourceUrl: url,
+            videoCount: 0,
+            videos: JSON.stringify([]),
+            format: null,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            userIp: ip,
+            userAgent,
+          },
+        })
+      }
+    } catch (dbError) {
+      console.error('Failed to save error to database:', dbError)
+    }
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

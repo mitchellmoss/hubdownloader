@@ -2,6 +2,15 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
+  // Protect admin dashboard routes
+  if (request.nextUrl.pathname.startsWith('/admin/dashboard')) {
+    const hasSession = request.cookies.has('admin_session');
+    
+    if (!hasSession) {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
+  }
+  
   // Get the hostname
   const hostname = request.headers.get('host') || ''
   

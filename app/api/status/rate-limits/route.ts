@@ -17,13 +17,15 @@ export async function GET(request: NextRequest) {
     // Get current rate limits for this IP
     const rateLimits = await prisma.rateLimit.findMany({
       where: {
-        identifier: ip,
-        window: {
-          gte: oneMinuteAgo
+        key: {
+          contains: ip
+        },
+        expiresAt: {
+          gte: now
         }
       },
       orderBy: {
-        window: 'desc'
+        expiresAt: 'desc'
       }
     })
     
@@ -48,7 +50,7 @@ export async function GET(request: NextRequest) {
           used: currentUsage,
           limit: 10,
           remaining: Math.max(0, 10 - currentUsage),
-          resetsAt: rateLimits[0] ? new Date(rateLimits[0].window.getTime() + 60000).toISOString() : null
+          resetsAt: rateLimits[0] ? rateLimits[0].expiresAt.toISOString() : null
         },
         conversion: {
           used: 0,

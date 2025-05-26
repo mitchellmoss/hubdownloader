@@ -17,45 +17,45 @@ export async function checkRateLimit(
              '127.0.0.1'
   
   const now = new Date()
-  const windowStart = new Date(now.getTime() - windowMs)
+  const windowEnd = new Date(now.getTime() + windowMs)
+  const key = `extract_${ip}`
   
   try {
-    // Clean old records
+    // Clean expired records
     await prisma.rateLimit.deleteMany({
       where: {
-        window: {
-          lt: windowStart
+        expiresAt: {
+          lt: now
         }
       }
     })
     
     // Get current rate limit
-    const current = await prisma.rateLimit.findFirst({
+    const current = await prisma.rateLimit.findUnique({
       where: {
-        identifier: ip,
-        window: {
-          gte: windowStart
-        }
-      },
-      orderBy: {
-        window: 'desc'
+        key
       }
     })
     
-    if (!current) {
-      // First request in window
-      await prisma.rateLimit.create({
-        data: {
-          identifier: ip,
+    if (!current || current.expiresAt < now) {
+      // First request in window or expired
+      await prisma.rateLimit.upsert({
+        where: { key },
+        update: {
           count: 1,
-          window: now
+          expiresAt: windowEnd
+        },
+        create: {
+          key,
+          count: 1,
+          expiresAt: windowEnd
         }
       })
       
       return {
         allowed: true,
         remaining: maxRequests - 1,
-        resetAt: new Date(now.getTime() + windowMs)
+        resetAt: windowEnd
       }
     }
     
@@ -64,20 +64,20 @@ export async function checkRateLimit(
       return {
         allowed: false,
         remaining: 0,
-        resetAt: new Date(current.window.getTime() + windowMs)
+        resetAt: current.expiresAt
       }
     }
     
     // Increment count
     await prisma.rateLimit.update({
-      where: { id: current.id },
+      where: { key },
       data: { count: current.count + 1 }
     })
     
     return {
       allowed: true,
       remaining: maxRequests - current.count - 1,
-      resetAt: new Date(current.window.getTime() + windowMs)
+      resetAt: current.expiresAt
     }
   } catch (error) {
     console.error('Rate limit error:', error)
