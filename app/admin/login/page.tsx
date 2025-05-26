@@ -37,7 +37,7 @@ export default function AdminLogin() {
   };
 
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+    const value = e.target.value.slice(0, 16);
     setPin(value);
   };
 
@@ -51,7 +51,7 @@ export default function AdminLogin() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Enter 16-digit PIN
+              Enter 16-character PIN
             </label>
             <input
               type="password"
@@ -60,13 +60,12 @@ export default function AdminLogin() {
               className="w-full px-4 py-3 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-lg tracking-wider"
               placeholder="••••••••••••••••"
               maxLength={16}
-              pattern="\d{16}"
               required
               disabled={loading}
               autoComplete="off"
             />
             <p className="mt-2 text-xs text-gray-400">
-              {pin.length}/16 digits
+              {pin.length}/16 characters
             </p>
           </div>
 

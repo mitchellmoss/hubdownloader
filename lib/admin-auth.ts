@@ -127,7 +127,7 @@ async function clearAttempts(ip: string): Promise<void> {
 export async function validateAdminPin(pin: string, ip: string): Promise<boolean> {
   // Check if PIN is configured
   if (!ADMIN_PIN || ADMIN_PIN.length !== 16) {
-    console.error('Admin PIN not properly configured');
+    console.error('Admin PIN not properly configured - must be exactly 16 characters');
     return false;
   }
 
@@ -136,8 +136,8 @@ export async function validateAdminPin(pin: string, ip: string): Promise<boolean
     return false;
   }
 
-  // Validate PIN format (16 digits)
-  if (!/^\d{16}$/.test(pin)) {
+  // Validate PIN length (16 characters)
+  if (pin.length !== 16) {
     await trackFailedAttempt(ip);
     return false;
   }
