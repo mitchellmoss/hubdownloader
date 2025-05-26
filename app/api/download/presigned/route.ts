@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validatePresignedUrl } from '@/lib/presigned-urls'
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic'
+
 /**
  * This endpoint handles presigned URL downloads for the direct download server.
  * It validates the presigned URL and either proxies the file or serves it directly.

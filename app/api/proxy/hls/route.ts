@@ -3,6 +3,9 @@ import { z } from 'zod'
 import { checkRateLimit, createRateLimitResponse } from '@/lib/simple-rate-limit'
 import { LARGE_FILE_THRESHOLD } from '@/lib/file-routing'
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic'
+
 const proxySchema = z.object({
   url: z.string().url(),
 })

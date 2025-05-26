@@ -8,6 +8,9 @@ import { checkRateLimit, createRateLimitResponse } from '@/lib/simple-rate-limit
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic'
+
 // In-memory storage for demo (replace with database in production)
 const extractionResults = new Map<string, any>()
 

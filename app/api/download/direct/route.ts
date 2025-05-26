@@ -3,6 +3,9 @@ import { checkRateLimit, createRateLimitResponse } from '@/lib/simple-rate-limit
 import { createFileRoutingDecision, estimateFileSize, createDownloadResponse } from '@/lib/file-routing'
 import { createPresignedUrlResponse } from '@/lib/presigned-urls'
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   // Check rate limit (20 requests per minute for downloads)
   const rateLimit = await checkRateLimit(request, 20, 60000)

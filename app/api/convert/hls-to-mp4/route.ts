@@ -7,6 +7,9 @@ import { checkRateLimit, createRateLimitResponse } from '@/lib/simple-rate-limit
 import { createFileRoutingDecision, LARGE_FILE_THRESHOLD } from '@/lib/file-routing'
 import { createPresignedUrlResponse } from '@/lib/presigned-urls'
 
+// Mark this route as dynamic to prevent static generation
+export const dynamic = 'force-dynamic'
+
 const convertSchema = z.object({
   url: z.string().url(),
   sourceUrl: z.string().url().optional(),  // Original page URL (e.g. YouTube URL)
