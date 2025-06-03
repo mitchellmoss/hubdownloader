@@ -2,8 +2,9 @@ import { Metadata } from 'next'
 import AdUnit from '@/components/AdUnit'
 
 export const metadata: Metadata = {
-  title: 'FAQ - Lyricless Video URL Extractor',
-  description: 'Frequently asked questions about using Lyricless to extract and download videos from websites.',
+  title: 'FAQ - Video Downloader Questions & Answers',
+  description: 'Frequently asked questions about downloading videos online. Learn about supported formats, legal considerations, and troubleshooting video extraction.',
+  keywords: ['video downloader faq', 'how to download videos', 'video download questions', 'video extraction help'],
 }
 
 export default function FAQPage() {
@@ -50,9 +51,27 @@ export default function FAQPage() {
     }
   ]
 
+  const jsonLdFAQ = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map(faq => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  }
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-4xl font-bold mb-8">Frequently Asked Questions</h1>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFAQ) }}
+      />
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <h1 className="text-4xl font-bold mb-8">Frequently Asked Questions</h1>
       
       <AdUnit slot="6789012345" format="horizontal" className="mb-8" />
       
@@ -75,6 +94,7 @@ export default function FAQPage() {
       </div>
       
       <AdUnit slot="7890123456" format="rectangle" className="mt-8" />
-    </div>
+      </div>
+    </>
   )
 }

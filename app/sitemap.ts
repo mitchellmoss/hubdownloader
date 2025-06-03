@@ -5,21 +5,62 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = getCanonicalUrl()
   
   const routes = [
-    '',
-    '/about',
-    '/how-to',
-    '/faq',
-    '/examples',
-    '/hls-guide',
-    '/privacy',
-    '/terms',
-    '/dmca',
+    {
+      route: '',
+      changeFrequency: 'daily' as const,
+      priority: 1.0,
+    },
+    {
+      route: '/about',
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    },
+    {
+      route: '/how-to',
+      changeFrequency: 'weekly' as const,
+      priority: 0.9,
+    },
+    {
+      route: '/faq',
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    },
+    {
+      route: '/examples',
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    },
+    {
+      route: '/hls-guide',
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    },
+    {
+      route: '/privacy',
+      changeFrequency: 'monthly' as const,
+      priority: 0.5,
+    },
+    {
+      route: '/terms',
+      changeFrequency: 'monthly' as const,
+      priority: 0.5,
+    },
+    {
+      route: '/dmca',
+      changeFrequency: 'monthly' as const,
+      priority: 0.5,
+    },
+    {
+      route: '/test-youtube',
+      changeFrequency: 'weekly' as const,
+      priority: 0.6,
+    },
   ]
   
-  return routes.map((route) => ({
-    url: getCanonicalUrl(route),
+  return routes.map((item) => ({
+    url: getCanonicalUrl(item.route),
     lastModified: new Date(),
-    changeFrequency: route === '' ? 'daily' : 'weekly',
-    priority: route === '' ? 1 : 0.8,
+    changeFrequency: item.changeFrequency,
+    priority: item.priority,
   }))
 }

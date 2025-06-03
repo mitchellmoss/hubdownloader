@@ -2,8 +2,14 @@ import { Metadata } from 'next'
 import AdUnit from '@/components/AdUnit'
 
 export const metadata: Metadata = {
-  title: 'How to Use Lyricless - Video URL Extractor',
-  description: 'Learn how to extract video URLs from any website using Lyricless. Step-by-step guide for downloading videos.',
+  title: 'How to Download Videos Online - Complete Guide 2025',
+  description: 'Step-by-step guide to download videos from any website. Learn how to extract and save MP4, HLS, and WebM videos directly in your browser.',
+  keywords: ['how to download videos', 'video download guide', 'extract video tutorial', 'download videos from website'],
+  openGraph: {
+    type: 'article',
+    title: 'How to Download Videos Online - Complete Guide',
+    description: 'Learn how to download videos from any website using our browser-based tool.',
+  },
 }
 
 export default function HowToPage() {
