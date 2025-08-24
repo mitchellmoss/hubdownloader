@@ -1,0 +1,114 @@
+# ==============================================================================
+# LYRICLESS - DEVELOPMENT ENVIRONMENT
+# ==============================================================================
+# Client-side video downloader development setup
+# Hot reload, debugging, and development tools
+
+version: '3.8'
+
+services:
+  # ==============================================================================
+  # Development Application - Hot Reload Enabled
+  # ==============================================================================
+  lyricless-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev-deps
+    container_name: lyricless-dev
+    restart: unless-stopped
+    
+    # Development command override
+    command: npm run dev
+    
+    # Development environment
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_TELEMETRY_DISABLED=1
+      - DATABASE_URL=file:./prisma/dev.db
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      # WebAssembly development
+      - FFMPEG_WASM_CDN=https://unpkg.com/@ffmpeg/core@0.12.6/dist
+      # CORS development (more permissive)
+      - CORS_ORIGINS=*
+    
+    # Port mapping
+    ports:
+      - "3000:3000"      # Next.js dev server
+      - "9229:9229"      # Node.js debugging
+    
+    # Volume mounts for development
+    volumes:
+      # Source code hot reload
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      
+      # Database persistence
+      - dev_data:/app/prisma
+      
+      # Cache
+      - dev_cache:/app/.next/cache
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/test"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    
+    networks:
+      - dev-network
+
+  # ==============================================================================
+  # Prisma Studio for Database Management
+  # ==============================================================================
+  prisma-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev-deps
+    container_name: prisma-studio
+    restart: "no"
+    profiles: ["tools"]  # Only start with --profile tools
+    
+    environment:
+      - DATABASE_URL=file:./prisma/dev.db
+    
+    ports:
+      - "5555:5555"
+    
+    volumes:
+      - .:/app
+      - dev_data:/app/prisma
+    
+    command: ["npx", "prisma", "studio", "--hostname", "0.0.0.0"]
+    
+    depends_on:
+      - lyricless-dev
+    
+    networks:
+      - dev-network
+
+# ==============================================================================
+# Development Networks
+# ==============================================================================
+networks:
+  dev-network:
+    driver: bridge
+
+# ==============================================================================
+# Development Volumes
+# ==============================================================================
+volumes:
+  # Development database
+  dev_data:
+    driver: local
+  
+  # Development cache
+  dev_cache:
+    driver: local

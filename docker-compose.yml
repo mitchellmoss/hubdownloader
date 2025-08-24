@@ -1,0 +1,127 @@
+# ==============================================================================
+# LYRICLESS - CLIENT-SIDE VIDEO DOWNLOADER
+# ==============================================================================
+# Optimized Docker Compose for client-side video processing
+# WebAssembly + Next.js 14 + Minimal Backend
+
+version: '3.8'
+
+services:
+  # ==============================================================================
+  # Main Application Service - Client-Side Processing
+  # ==============================================================================
+  lyricless:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lyricless-app
+    restart: unless-stopped
+    
+    # Resource limits optimized for client-side processing
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.5G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    
+    # Environment variables for production
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_TELEMETRY_DISABLED=1
+      - DATABASE_URL=file:./prisma/dev.db
+      # WebAssembly specific
+      - FFMPEG_WASM_CDN=${FFMPEG_WASM_CDN:-https://unpkg.com/@ffmpeg/core@0.12.6/dist}
+      # CORS settings
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+    
+    # Port mapping
+    ports:
+      - "3000:3000"
+    
+    # Volume mounts - minimal for client-side architecture
+    volumes:
+      # Database persistence
+      - lyricless_data:/app/prisma
+      # Browser extension files (accessible)
+      - ./extension:/app/extension:ro
+      # Temporary cache only (no large video files stored)
+      - lyricless_cache:/app/.next/cache
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/test"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+    
+    networks:
+      - lyricless-network
+
+  # ==============================================================================
+  # Nginx Reverse Proxy with WebAssembly Support
+  # ==============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: lyricless-nginx
+    restart: unless-stopped
+    profiles: ["production"]  # Only start in production profile
+    
+    ports:
+      - "80:80"
+      - "443:443"
+    
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_logs:/var/log/nginx
+    
+    depends_on:
+      - lyricless
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    
+    networks:
+      - lyricless-network
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+networks:
+  lyricless-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: lyricless-net
+
+# ==============================================================================
+# Volumes - Minimal for Client-Side Architecture
+# ==============================================================================
+volumes:
+  # Database storage (SQLite)
+  lyricless_data:
+    driver: local
+  
+  # Application cache (Next.js build cache)
+  lyricless_cache:
+    driver: local
+  
+  # Nginx logs (production only)
+  nginx_logs:
+    driver: local

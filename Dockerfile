@@ -1,85 +1,93 @@
-# Build stage
-FROM node:18-alpine AS builder
+# Multi-stage optimized build for Next.js video downloader
+FROM node:20-alpine AS base
 
-# Install dependencies for Puppeteer
-RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    python3 \
-    make \
-    g++
+# Install security updates and required packages
+RUN apk update && apk upgrade && apk add --no-cache \
+    libc6-compat \
+    dumb-init
 
-# Install ffmpeg and yt-dlp
-RUN apk add --no-cache ffmpeg py3-pip && \
-    pip3 install --no-cache-dir yt-dlp
-
+# Dependencies stage
+FROM base AS deps
 WORKDIR /app
 
-# Copy package files
+# Copy package files for better Docker layer caching
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci
+# Install production dependencies only
+RUN npm ci --only=production && npm cache clean --force
 
-# Copy application files
+# Development dependencies stage
+FROM base AS dev-deps
+WORKDIR /app
+
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install all dependencies for build
+RUN npm ci && npm cache clean --force
+
+# Builder stage
+FROM dev-deps AS builder
+WORKDIR /app
+
+# Copy source code
 COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build Next.js application
+# Build Next.js application with standalone output
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
+# Production runtime stage
+FROM node:20-alpine AS runner
 
-# Install runtime dependencies
-RUN apk add --no-cache \
+# Install runtime dependencies and security updates
+RUN apk update && apk upgrade && apk add --no-cache \
     chromium \
     nss \
     freetype \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    ffmpeg \
-    py3-pip \
-    curl \
-    tini && \
-    pip3 install --no-cache-dir yt-dlp
+    dumb-init \
+    curl
 
-# Create app user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
 WORKDIR /app
 
-# Copy built application
-COPY --from=builder --chown=nextjs:nodejs /app/package*.json ./
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+# Copy standalone application files
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./
+COPY --from=builder --chown=nextjs:nodejs /app/extension ./extension
 
-# Set Puppeteer environment variables
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+# Create necessary directories with proper permissions
+RUN mkdir -p /tmp/videos /app/.next/cache && \
+    chown -R nextjs:nodejs /tmp/videos /app/.next/cache
+
+# Set environment variables
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV HOSTNAME="0.0.0.0"
+ENV PORT=3000
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Create necessary directories
-RUN mkdir -p /tmp/videos && chown -R nextjs:nodejs /tmp/videos
-
+# Switch to non-root user
 USER nextjs
 
+# Expose port
 EXPOSE 3000
 
-# Use tini for proper signal handling
-ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["npm", "start"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3000/api/test || exit 1
+
+# Use dumb-init for proper signal handling and PID 1
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "server.js"]

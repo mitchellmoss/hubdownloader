@@ -1,0 +1,49 @@
+# ==============================================================================
+# LYRICLESS - DEVELOPMENT DOCKERFILE
+# ==============================================================================
+# Development environment with hot reload and debugging capabilities
+
+FROM node:18-alpine AS development
+
+# Install development dependencies
+RUN apk add --no-cache \
+    git \
+    curl \
+    bash \
+    vim \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 -G nodejs
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install all dependencies (including dev dependencies)
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Create necessary directories
+RUN mkdir -p /tmp/videos /app/.next && \
+    chown -R nextjs:nodejs /tmp/videos /app/.next
+
+# Development environment variables
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV WATCHPACK_POLLING=true
+
+USER nextjs
+
+EXPOSE 3000 9229
+
+# Development command with debugging
+CMD ["npm", "run", "dev"]

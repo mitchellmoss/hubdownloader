@@ -1,0 +1,114 @@
+# ==============================================================================
+# LYRICLESS - NEXT.JS 14 VIDEO DOWNLOADER - OPTIMIZED DOCKERFILE
+# ==============================================================================
+# Multi-stage build for Next.js 14 app with client-side WebAssembly support
+# Optimized for security, performance, and minimal attack surface
+
+# ==============================================================================
+# Stage 1: Base Dependencies
+# ==============================================================================
+FROM node:18-alpine AS base
+LABEL maintainer="lyricless-team"
+LABEL description="Client-side video downloader with WebAssembly support"
+
+# Install security updates and required system packages
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    libc6-compat \
+    tzdata \
+    dumb-init && \
+    rm -rf /var/cache/apk/*
+
+# Create non-root user early
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 -G nodejs
+
+WORKDIR /app
+
+# ==============================================================================
+# Stage 2: Dependencies Installation
+# ==============================================================================
+FROM base AS deps
+
+# Copy package files with proper ownership
+COPY --chown=nextjs:nodejs package*.json ./
+COPY --chown=nextjs:nodejs prisma ./prisma/
+
+# Configure npm for production and security
+RUN npm config set fund false && \
+    npm config set audit-level high && \
+    npm ci --only=production --no-optional && \
+    npm cache clean --force
+
+# ==============================================================================
+# Stage 3: Build Stage
+# ==============================================================================
+FROM base AS builder
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --chown=nextjs:nodejs . .
+
+# Set build environment variables
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Build Next.js application with optimizations
+RUN npm run build && \
+    npm prune --production
+
+# ==============================================================================
+# Stage 4: Production Runtime
+# ==============================================================================
+FROM node:18-alpine AS runtime
+
+# Install minimal runtime dependencies for WebAssembly and security
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    tini \
+    ca-certificates \
+    tzdata \
+    curl && \
+    rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 -G nodejs
+
+WORKDIR /app
+
+# Set production environment variables
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Security: Remove potentially dangerous binaries
+RUN rm -rf /usr/bin/wget /usr/bin/curl /bin/sh || true
+
+# Copy built application with proper ownership
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/extension ./extension
+
+# Create necessary directories for WebAssembly and video processing
+RUN mkdir -p /tmp/ffmpeg /tmp/videos /app/.next/cache && \
+    chown -R nextjs:nodejs /tmp/ffmpeg /tmp/videos /app/.next/cache && \
+    chmod 755 /tmp/ffmpeg /tmp/videos /app/.next/cache
+
+# Health check for container monitoring
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/api/test || exit 1
+
+USER nextjs
+
+EXPOSE 3000
+
+# Use tini for proper signal handling and zombie reaping
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "server.js"]
