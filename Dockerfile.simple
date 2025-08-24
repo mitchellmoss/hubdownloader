@@ -1,0 +1,64 @@
+FROM node:20-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    dumb-init \
+    curl \
+    python3 \
+    py3-pip \
+    ffmpeg \
+    git \
+    make \
+    g++ \
+    openssl \
+    openssl-dev
+
+# Install yt-dlp
+RUN pip3 install --no-cache-dir yt-dlp --break-system-packages
+
+# Set Puppeteer to use system chromium
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Build the app
+RUN npm run build
+
+# Expose port
+EXPOSE 3000
+
+# Set environment
+ENV NODE_ENV=production
+ENV DATABASE_URL="file:/app/data/database.db"
+ENV ADMIN_PIN="Kvpd6!Xwmb@YT@b3"
+
+# Create directories
+RUN mkdir -p /app/data /app/downloads /app/temp
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Start the application
+CMD ["npm", "start"]

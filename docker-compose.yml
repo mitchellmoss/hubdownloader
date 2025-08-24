@@ -1,31 +1,31 @@
 # ==============================================================================
-# LYRICLESS - CLIENT-SIDE VIDEO DOWNLOADER
+# LYRICLESS - SERVER-SIDE VIDEO DOWNLOADER
 # ==============================================================================
-# Optimized Docker Compose for client-side video processing
-# WebAssembly + Next.js 14 + Minimal Backend
+# Docker Compose for server-side video processing with Puppeteer and yt-dlp
+# Next.js 14 + Puppeteer + yt-dlp + ffmpeg
 
 version: '3.8'
 
 services:
   # ==============================================================================
-  # Main Application Service - Client-Side Processing
+  # Main Application Service - Server-Side Processing
   # ==============================================================================
   lyricless:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.simple
     container_name: lyricless-app
     restart: unless-stopped
     
-    # Resource limits optimized for client-side processing
+    # Resource limits optimized for server-side processing
     deploy:
       resources:
         limits:
-          cpus: '1.5'
-          memory: 1.5G
+          cpus: '2.0'
+          memory: 2G
         reservations:
-          cpus: '0.25'
-          memory: 256M
+          cpus: '0.5'
+          memory: 512M
     
     # Environment variables for production
     environment:
@@ -33,36 +33,37 @@ services:
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - NEXT_TELEMETRY_DISABLED=1
-      - DATABASE_URL=file:./prisma/dev.db
-      # WebAssembly specific
-      - FFMPEG_WASM_CDN=${FFMPEG_WASM_CDN:-https://unpkg.com/@ffmpeg/core@0.12.6/dist}
-      # CORS settings
-      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - DATABASE_URL=file:/app/data/database.db
+      - ADMIN_PIN=Kvpd6!Xwmb@YT@b3
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
     
     # Port mapping
     ports:
       - "3000:3000"
     
-    # Volume mounts - minimal for client-side architecture
+    # Volume mounts for server-side architecture
     volumes:
       # Database persistence
-      - lyricless_data:/app/prisma
-      # Browser extension files (accessible)
-      - ./extension:/app/extension:ro
-      # Temporary cache only (no large video files stored)
+      - lyricless_data:/app/data
+      # Downloads directory
+      - lyricless_downloads:/app/downloads
+      # Temporary files
+      - lyricless_temp:/app/temp
+      # Next.js cache
       - lyricless_cache:/app/.next/cache
     
     # Security settings
     security_opt:
       - no-new-privileges:true
     
-    # Health check
+    # Health check - using lightweight endpoint
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/test"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 15s
       retries: 3
-      start_period: 40s
+      start_period: 90s
     
     # Logging configuration
     logging:
@@ -111,11 +112,19 @@ networks:
       com.docker.network.bridge.name: lyricless-net
 
 # ==============================================================================
-# Volumes - Minimal for Client-Side Architecture
+# Volumes - Server-Side Architecture
 # ==============================================================================
 volumes:
   # Database storage (SQLite)
   lyricless_data:
+    driver: local
+  
+  # Downloads directory (temporary video files)
+  lyricless_downloads:
+    driver: local
+  
+  # Temporary processing files
+  lyricless_temp:
     driver: local
   
   # Application cache (Next.js build cache)

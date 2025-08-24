@@ -9,16 +9,16 @@ import { getMetadataBase, SITE_NAME, SITE_DESCRIPTION } from '@/lib/config'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: `${SITE_NAME} - Client-Side Video Downloader | Extract Videos in Browser`,
-  description: 'Download videos directly in your browser with complete privacy. No server uploads. Supports YouTube, HLS, MP4. WebAssembly-powered video extraction and conversion.',
+  title: `${SITE_NAME} - Server-Side Video Downloader | Extract Videos Securely`,
+  description: 'Fast and reliable server-side video downloader. Extract and download videos from YouTube, HLS, MP4 and other platforms with server-side processing.',
   keywords: [
-    'client-side video downloader',
-    'browser video downloader',
-    'private video downloader',
+    'server-side video downloader',
+    'video downloader',
+    'secure video downloader',
     'youtube downloader',
     'hls downloader',
-    'webassembly video converter',
-    'no upload video downloader',
+    'video converter',
+    'video extractor',
     'extract video urls',
     'video url extractor',
     'download videos online',
@@ -39,8 +39,8 @@ export const metadata: Metadata = {
     telephone: false,
   },
   openGraph: {
-    title: `${SITE_NAME} - Client-Side Video Downloader`,
-    description: 'Download videos directly in your browser. Complete privacy, no server uploads. YouTube, HLS, MP4 support.',
+    title: `${SITE_NAME} - Server-Side Video Downloader`,
+    description: 'Fast and reliable server-side video downloader. Extract videos from YouTube, HLS, MP4 and other platforms.',
     type: 'website',
     locale: 'en_US',
     siteName: SITE_NAME,
@@ -56,8 +56,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${SITE_NAME} - Client-Side Video Downloader`,
-    description: 'Download videos directly in your browser. Complete privacy, no server uploads.',
+    title: `${SITE_NAME} - Server-Side Video Downloader`,
+    description: 'Fast and reliable server-side video downloader. Extract videos from multiple platforms.',
     images: ['/twitter-image'],
     creator: '@yourtwitterhandle',
     site: '@yourtwitterhandle',

@@ -10,7 +10,7 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold mb-3">About Lyricless</h3>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              The most private video downloader. All processing happens in your browser using WebAssembly technology.
+              Fast and reliable server-side video downloader. Extract and download videos from various platforms.
             </p>
           </div>
           
@@ -42,7 +42,7 @@ export default function Footer() {
             </div>
             
             <div className="text-gray-600 dark:text-gray-400 text-sm">
-              Made with ❤️ using Next.js and WebAssembly
+              Made with ❤️ using Next.js and server-side processing
             </div>
           </div>
         </div>

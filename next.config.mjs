@@ -7,31 +7,9 @@ const nextConfig = {
     serverComponentsExternalPackages: ['puppeteer'],
   },
   
-  // WebAssembly support for FFmpeg.wasm
+  // Server-side only configuration
   webpack: (config, { isServer }) => {
-    // Enable WebAssembly support
-    config.experiments = {
-      ...config.experiments,
-      asyncWebAssembly: true,
-      layers: true,
-    };
-
-    // Handle .wasm files
-    config.module.rules.push({
-      test: /\.wasm$/,
-      type: 'webassembly/async',
-    });
-
-    // Client-side optimizations for WebAssembly
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        path: false,
-        crypto: false,
-      };
-    }
-
+    // Server-side optimizations only
     return config;
   },
 
@@ -60,7 +38,7 @@ const nextConfig = {
         ],
       },
       {
-        // Enable CORS for WebAssembly files
+        // API CORS headers
         source: '/api/(.*)',
         headers: [
           {
@@ -73,7 +51,7 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Range'
+            value: 'Content-Type'
           }
         ],
       }
