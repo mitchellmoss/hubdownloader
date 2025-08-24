@@ -1,170 +1,284 @@
-# Lyricless - Client-Side Video Downloader
+# Lyricless - General Purpose Video Downloader
 
 ## Project Overview
-A web application that extracts and downloads videos entirely in the browser using WebAssembly and client-side JavaScript. No server-side video processing - complete privacy and performance.
+A web application that extracts direct video URLs from various sources (CDN links and HTML-embedded videos) and provides download links without storing videos on our server. Now supports YouTube, adult sites (PornHub, etc.), and general video extraction with HLS/DASH streaming support.
 
-## Client-Side Architecture (client-side-new branch)
-
-### Tech Stack
-- **Frontend**: Next.js 14 with App Router (TypeScript)
-- **Client-Side Video Processing**: 
-  - FFmpeg.wasm for video conversion
-  - m3u8-parser for HLS parsing
-  - Browser APIs for video detection
-- **Minimal Backend**: 
-  - CORS proxy endpoint only
-  - Rate limiting
-  - Analytics (optional)
+## Tech Stack
+- **Full Stack**: Next.js 14 with App Router (TypeScript)
+- **Backend API**: Next.js API Routes
+- **URL Extraction**: Puppeteer for dynamic content
+- **Video Processing**: yt-dlp and ffmpeg for HLS/DASH streams
+- **Client-side**: Video URL detection scripts
 - **Styling**: Tailwind CSS
-- **Browser Extension**: Enhanced extraction capabilities
+- **Database**: SQLite via Prisma (for analytics, extraction history)
+- **ORM**: Prisma
+- **Ad Integration**: Google AdSense (prepared)
+- **Analytics**: Google Analytics 4 (prepared)
 
-### Core Client-Side Modules
+## Core Features
 
-#### 1. Video Detector (`lib/client/video-detector.ts`)
-- Monitors DOM for video elements
-- Intercepts fetch/XHR requests
-- Detects video URLs from network traffic
-- Supports MP4, WebM, HLS, DASH formats
-- Emits custom events for detected videos
+### 1. Video URL Extraction
+- **Direct CDN Links**: Detect .mp4, .webm, .m3u8 (HLS), .mpd (DASH)
+- **HTML Embedded Videos**: Extract from HTML5 video tags, iframe embeds
+- **Dynamic Content**: Use headless browser to capture dynamically loaded videos
+- **Multi-quality Detection**: Find all available quality URLs
+- **Direct Download Links**: Provide direct URLs to users for downloading
 
-#### 2. HLS Client (`lib/client/hls-client.ts`)
-- Parses HLS master and variant playlists
-- Downloads segments in parallel batches
-- Concatenates segments into single blob
-- Handles CORS with proxy fallback
+### 2. Supported Formats
+- Direct video files (MP4, WebM, AVI, MOV)
+- HLS Streams (.m3u8)
+- DASH Streams (.mpd)
+- Progressive HTTP downloads
+- Blob URLs (with limitations)
 
-#### 3. FFmpeg Client (`lib/client/ffmpeg-client.ts`)
-- WebAssembly-based video processing
-- HLS to MP4 conversion
-- Audio/video stream merging
-- Thumbnail extraction
-- Metadata parsing
+### 3. User Interface
+- Clean, modern design
+- Paste URL input field
+- Loading indicator while extracting URLs
+- Display extracted video URLs with quality options
+- One-click download buttons
+- Copy URL to clipboard option
+- Recent extractions history
 
-#### 4. YouTube Client (`lib/client/youtube-client.ts`)
-- Extracts video info without yt-dlp
-- Parses YouTube player response
-- Handles separate audio/video streams
-- Quality selection support
+### 4. Monetization
+- Strategic ad placement (header, sidebar, between results)
+- Non-intrusive ad experience
+- Premium tier (ad-free, higher limits)
 
-#### 5. Unified Extractor (`lib/client/unified-extractor.ts`)
-- Combines all extraction methods
-- Automatic site detection
-- Progress tracking
-- Download management
+### 5. SEO Strategy
+- Server-side rendering with Next.js App Router
+- Structured data (Schema.org)
+- Dynamic sitemap generation
+- Meta tags optimization with Next.js metadata API
+- Fast Core Web Vitals
+- Mobile-first design
+- Dynamic OG images for social sharing
 
-### Minimal Server Components
+## Technical Architecture
 
-#### CORS Proxy (`api/proxy/cors/route.ts`)
-- Bypasses CORS restrictions
-- Whitelisted domains only
-- Proper referer headers
-- Minimal overhead
-
-### Browser Extension (Optional)
-- Enhanced network request interception
-- Background video detection
-- Badge notification
-- Works on any website
-
-## Key Advantages of Client-Side Architecture
-
-### Privacy
-- No video data sent to servers
-- Complete user privacy
-- No server logs of video URLs
-- Local processing only
-
-### Performance
-- No server bandwidth costs
-- Parallel processing
-- Direct downloads
-- WebAssembly speed
-
-### Scalability
-- No server infrastructure needed
-- Handles unlimited users
-- No video storage required
-- Minimal hosting costs
-
-### Security
-- No server-side vulnerabilities
-- No data breaches possible
-- Client-isolated processing
-- No stored user data
-
-## Implementation Status ✅
-
-### Completed
-- [x] Client-side video detection
-- [x] HLS parsing and downloading
-- [x] FFmpeg.wasm integration
-- [x] YouTube extraction without yt-dlp
-- [x] CORS proxy endpoint
-- [x] Unified extraction API
-- [x] Progress tracking
-- [x] Browser extension structure
-
-### Pending
-- [ ] Install dependencies (npm install)
-- [ ] Test all extraction methods
-- [ ] Optimize WebAssembly loading
-- [ ] Add more site-specific extractors
-- [ ] Improve CORS handling
-- [ ] Add IndexedDB caching
-
-## Usage Instructions
-
-### Development
-```bash
-# Install new dependencies
-npm install
-
-# Run development server
-npm run dev
-
-# Visit http://localhost:3000
+### API Routes (Next.js App Router)
+```
+POST /api/extract - Extract video URLs from a webpage
+GET /api/proxy/[...url] - Optional proxy for CORS-blocked videos
+POST /api/analytics - Track successful extractions
+GET /api/history - Get user's extraction history
 ```
 
-### Production Build
+### Page Routes (SSR)
+```
+/ - Homepage with URL input form
+/extract/[id] - Results page showing extracted URLs
+/history - User's extraction history
+/how-to - Tutorial pages (SEO)
+/about - About page (SEO)
+/faq - Frequently asked questions (SEO)
+```
+
+### URL Extraction Pipeline
+1. **Page Load**: Load target page with Puppeteer/Playwright
+2. **Network Monitoring**: Capture all network requests for video files
+3. **DOM Analysis**: Parse HTML5 video/source tags
+4. **JavaScript Execution**: Wait for dynamic content to load
+5. **URL Collection**: Aggregate all found video URLs
+6. **Response**: Return list of direct video URLs to client
+
+### Security Considerations
+- **Rate limiting per IP**:
+  - Extraction: 10 requests/minute
+  - HLS Conversion: 5 requests/minute (resource intensive)
+  - HLS Proxy: 30 requests/minute
+  - Direct Downloads: 20 requests/minute
+  - Results Viewing: 60 requests/minute
+- URL validation and sanitization
+- Timeout for page loading (30 seconds max)
+- Memory limits for headless browser
+- No execution of untrusted scripts
+- SQLite for analytics only (no sensitive data)
+- Regular browser instance recycling
+- Rate limit headers included in responses (X-RateLimit-*)
+
+## Current Implementation Status
+
+### Completed Features ✅
+- **Core Infrastructure**
+  - Next.js 14 with App Router and TypeScript
+  - Tailwind CSS styling with dark mode support
+  - SQLite database via Prisma for extraction history
+  - Rate limiting (10 requests/minute per IP)
+  
+- **Video Extraction**
+  - Puppeteer integration for dynamic content extraction
+  - YouTube video extraction with yt-dlp support
+  - Adult site extraction (PornHub, xVideos, xHamster)
+  - HLS stream detection and download support
+  - Quality detection for multi-quality videos
+  - Network request interception for video URLs
+  - **Quality-specific downloads** - respects user's resolution choice (480p, 720p, 1080p, etc.)
+  
+- **HLS/DASH Support**
+  - HLS downloader component with quick download (.ts)
+  - Convert to MP4 functionality using ffmpeg
+  - yt-dlp integration for better compatibility
+  - Progress tracking and error handling
+  - **Audio+Video merging** for YouTube videos
+  - **Quality-aware format selection** using yt-dlp format selectors
+  
+- **UI/UX Features**
+  - Responsive design with mobile support
+  - Copy URL to clipboard
+  - Loading states and error messages
+  - Format-specific download instructions
+  - Debug logging in development
+  - **Long URL handling** with proper text wrapping
+  
+- **Direct Video Downloads**
+  - Native browser download for direct video files (MP4, WebM, AVI, MOV, etc.)
+  - Automatic filename detection from URL
+  - Proper content-type headers for all video formats
+  - Fallback proxy endpoint for CORS-restricted videos
+  - Format-specific instructions for users
+  - **Context-aware download buttons** - direct download for video files, special handling for streams
+  
+### Specialized Extractors
+1. **YouTube Extractor** (`lib/youtube-extractor.ts`)
+   - Attempts yt-dlp first for best results
+   - Falls back to Puppeteer for HLS streams
+   - Detects quality from itag parameters
+   - Properly marks HLS streams
+   - Prioritizes non-HLS formats with audio
+
+2. **Adult Site Extractor** (`lib/adult-extractor.ts`)
+   - Uses pornhub.js package for PornHub
+   - Falls back to Puppeteer when needed
+   - Handles HLS streams properly
+   - Filters out ads and tracking URLs
+
+3. **General Puppeteer Extractor** (`lib/puppeteer.ts`)
+   - Catches all video formats (mp4, webm, m3u8, mpd)
+   - Filters out ads, analytics, and non-video URLs
+   - Detects HLS streams automatically
+
+### Pending Features 🚧
+- [ ] AdSense integration (placeholders ready)
+- [ ] Google Analytics 4 setup
+- [ ] User accounts and saved extractions
+- [ ] Premium tier (ad-free, higher limits)
+- [ ] Browser pool management for scaling
+- [ ] Request queuing system
+- [ ] Analytics dashboard
+- [ ] API documentation
+
+## Legal Considerations
+- Clear terms of service
+- DMCA compliance
+- User responsibility disclaimer
+- Copyright notice
+- Privacy policy
+
+## Performance Targets
+- < 3s page load time
+- < 15s URL extraction time
+- Handle 50 concurrent extractions
+- Browser memory < 500MB per instance
+- 95% uptime
+
+## Deployment Requirements
+- **Server**: VPS with 4GB+ RAM (DigitalOcean/AWS/Hetzner)
+- **Dependencies**: 
+  - Node.js 18+
+  - Chrome/Chromium for Puppeteer
+  - ffmpeg for video conversion
+  - yt-dlp for enhanced extraction (optional but recommended)
+- **Process Manager**: PM2 for Node.js
+- **Reverse Proxy**: Nginx with proper headers for video streaming
+- **SSL**: Let's Encrypt for HTTPS
+- **Database**: SQLite (file-based, included in deployment)
+
+## Installation Instructions
 ```bash
+# Clone repository
+git clone https://github.com/mitchellmoss/lyricless.git
+cd lyricless
+
+# Install dependencies
+npm install
+
+# Setup database
+npx prisma migrate deploy
+
+# Install system dependencies
+sudo apt update
+sudo apt install -y chromium-browser ffmpeg
+pip install yt-dlp
+
+# Build and start
 npm run build
 npm start
 ```
 
-### Browser Extension
-1. Open Chrome/Edge
-2. Go to chrome://extensions
-3. Enable Developer Mode
-4. Load unpacked from `/extension` folder
+## SEO Keywords Target
+- "video downloader"
+- "download online videos"
+- "save videos from website"
+- "free video download tool"
+- "web video downloader"
 
-## Client-Side Limitations & Solutions
+## Revenue Model
+1. Display ads (primary)
+   - Header banner
+   - Sidebar ads
+   - Between extraction results
+2. Optional donations
+   - Buy me a coffee integration
+   - Crypto donations
 
-### Limitation 1: CORS
-**Problem**: Can't fetch from most video sites directly
-**Solution**: Minimal CORS proxy for manifest/metadata only
+## Success Metrics
+- Monthly active users
+- Average extractions per user
+- Ad revenue per user
+- Server costs vs revenue
+- Page load speed
+- Extraction success rate
 
-### Limitation 2: Site Access
-**Problem**: Can't navigate to sites programmatically
-**Solution**: Browser extension or user-initiated extraction
+## Known Issues & Solutions
 
-### Limitation 3: DRM Content
-**Problem**: Can't extract DRM-protected videos
-**Solution**: Clear messaging to users about limitations
+### HLS Download Issues
+- **HMAC Authentication Errors**: Some sites use time-based tokens. Use yt-dlp for better handling
+- **Incomplete Downloads**: Install yt-dlp for more reliable HLS downloads
+- **Conversion Failures**: Ensure ffmpeg is installed and up to date
 
-### Limitation 4: Large Files
-**Problem**: Memory constraints for large videos
-**Solution**: Streaming download with chunks
+### YouTube Extraction
+- YouTube URLs are best handled with yt-dlp installed
+- Falls back to HLS stream detection via Puppeteer
+- Quality is detected from itag parameters in URLs
+- Audio and video streams are properly merged
 
-## SEO & Marketing
-- "Client-side video downloader"
-- "Browser-based video extraction"
-- "Private video downloader"
-- "No upload video downloader"
-- "WebAssembly video converter"
+### Adult Site Extraction (PornHub, xVideos, xHamster)
+- **HLS Audio Issues**: Many adult sites serve video and audio in separate HLS playlists
+- **Solution**: Use "Convert to MP4" option which uses yt-dlp with the original page URL
+- **Format Selection**: Adult sites use `best/bestvideo+bestaudio` format selector for better compatibility
+- **Headers**: Proper referer headers are set automatically based on the site
+- **Best Practice**: Always install yt-dlp for best results with adult sites
 
-## Future Enhancements
-1. **Service Worker**: Offline support
-2. **WebRTC**: P2P video sharing
-3. **IndexedDB**: Local video library
-4. **PWA**: Installable app
-5. **WebGPU**: Hardware acceleration
+### Direct Video Downloads
+- Direct video files (MP4, WebM, etc.) use the browser's native download functionality
+- Download button automatically triggers download with proper filename
+- Falls back to opening in new tab for problematic formats
+- Proxy endpoint available at `/api/download/direct` for CORS-restricted videos
+- Automatic referer headers for adult sites (PornHub, xVideos, xHamster)
+
+### Development Notes
+- Run with `npm run dev` for hot reload
+- Check browser console for extraction debug logs
+- Database file is at `prisma/dev.db`
+- Logs show extraction flow: YouTube → Adult → Puppeteer
+
+## Testing Checklist
+- [ ] YouTube video extraction (with/without yt-dlp)
+- [ ] Adult site video extraction
+- [ ] HLS stream download (.ts format)
+- [ ] HLS to MP4 conversion
+- [ ] Rate limiting (>10 requests/minute)
+- [ ] Mobile responsive design
+- [ ] Error handling for invalid URLs
+- [ ] Quality-specific downloads (480p, 720p, 1080p)
