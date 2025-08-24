@@ -1,0 +1,128 @@
+# ==============================================================================
+# LYRICLESS - DEVELOPMENT DOCKERFILE
+# ==============================================================================
+# Optimized for development with hot reload, debugging, and development tools
+# Features: Fast rebuilds, volume mounts, development dependencies
+
+FROM node:20-alpine AS base
+
+# Install security updates and development tools
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    # Essential tools
+    libc6-compat \
+    dumb-init \
+    curl \
+    ca-certificates \
+    # Development tools
+    git \
+    bash \
+    # Python and pip for yt-dlp
+    python3 \
+    py3-pip \
+    # FFmpeg for video processing
+    ffmpeg \
+    # Chromium and dependencies for Puppeteer
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ttf-freefont \
+    libstdc++ \
+    # Build tools for native dependencies
+    make \
+    g++ \
+    # Additional development tools
+    htop \
+    nano \
+    vim
+
+# Install yt-dlp with development features
+RUN pip3 install --no-cache-dir --upgrade \
+    yt-dlp[default] \
+    --break-system-packages
+
+# Create development user (optional, can run as root in dev)
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 --ingroup nodejs --shell /bin/bash nextjs
+
+# Set working directory
+WORKDIR /app
+
+# Change ownership of working directory
+RUN chown -R nextjs:nodejs /app
+
+# Switch to development user
+USER nextjs
+
+# Copy package files first for better Docker layer caching
+COPY --chown=nextjs:nodejs package*.json ./
+COPY --chown=nextjs:nodejs prisma ./prisma/
+
+# Install ALL dependencies (including devDependencies)
+RUN npm ci --no-audit --no-fund
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Create necessary directories
+RUN mkdir -p \
+    /app/data \
+    /app/temp \
+    /app/downloads \
+    /app/logs \
+    /app/.next/cache
+
+# Development environment variables
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME="0.0.0.0"
+ENV PORT=3000
+
+# Puppeteer configuration for development
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Development database configuration
+ENV DATABASE_URL="file:/app/data/dev.db"
+
+# Development video processing settings
+ENV TEMP_DIR="/app/temp"
+ENV DOWNLOADS_DIR="/app/downloads"
+ENV MAX_VIDEO_SIZE="1GB"
+ENV MAX_CONCURRENT_DOWNLOADS=5
+ENV CLEANUP_TEMP_FILES=false
+
+# Development debugging settings
+ENV DEBUG="lyricless:*"
+ENV LOG_LEVEL="debug"
+ENV ENABLE_ANALYTICS=false
+
+# Chrome flags for development (less restrictive)
+ENV CHROME_FLAGS="--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-web-security,--allow-running-insecure-content"
+
+# Copy the rest of the application code
+# (In development, this will be overridden by volume mounts)
+COPY --chown=nextjs:nodejs . .
+
+# Expose port
+EXPOSE 3000
+
+# Expose debugging port for Node.js
+EXPOSE 9229
+
+# Health check for development
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3000/api/test || exit 1
+
+# Labels for development
+LABEL maintainer="Lyricless Development Team" \
+    version="dev" \
+    description="Development environment for Lyricless video downloader"
+
+# Development entrypoint (can be overridden)
+ENTRYPOINT ["dumb-init", "--"]
+
+# Default command for development (with hot reload)
+CMD ["npm", "run", "dev"]

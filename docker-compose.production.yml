@@ -1,0 +1,345 @@
+# ==============================================================================
+# LYRICLESS - SERVER-SIDE VIDEO DOWNLOADER
+# Production Docker Compose Configuration
+# ==============================================================================
+# Features: Video processing, browser automation, persistent storage, monitoring
+
+version: '3.8'
+
+services:
+  # ==============================================================================
+  # Main Application Service - Server-Side Video Processing
+  # ==============================================================================
+  lyricless:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+      target: runner
+      args:
+        - NODE_ENV=production
+    
+    container_name: lyricless-app
+    restart: unless-stopped
+    
+    # Resource limits optimized for server-side video processing
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'        # Increased for video processing
+          memory: 4G         # Increased for large video files
+        reservations:
+          cpus: '1.0'
+          memory: 512M
+    
+    # Environment variables for production
+    environment:
+      # Application settings
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_TELEMETRY_DISABLED=1
+      
+      # Database configuration
+      - DATABASE_URL=file:/app/data/database.db
+      
+      # Video processing settings
+      - TEMP_DIR=/app/temp
+      - DOWNLOADS_DIR=/app/downloads
+      - MAX_VIDEO_SIZE=500MB
+      - MAX_CONCURRENT_DOWNLOADS=3
+      - CLEANUP_TEMP_FILES=true
+      - CLEANUP_INTERVAL=3600000
+      
+      # Puppeteer configuration
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      - CHROME_FLAGS=--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-accelerated-2d-canvas,--no-first-run,--no-zygote,--disable-gpu
+      
+      # yt-dlp configuration
+      - YTDLP_OUTPUT_TEMPLATE=/app/temp/%(title)s.%(ext)s
+      - YTDLP_MAX_QUALITY=1080p
+      - YTDLP_CONCURRENT_FRAGMENTS=4
+      
+      # FFmpeg configuration
+      - FFMPEG_BINARY=/usr/bin/ffmpeg
+      - FFPROBE_BINARY=/usr/bin/ffprobe
+      
+      # Security settings
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - RATE_LIMIT_MAX=100
+      - RATE_LIMIT_WINDOW=3600000
+      
+      # Monitoring and logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_ANALYTICS=${ENABLE_ANALYTICS:-true}
+    
+    # Port mapping
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    
+    # Volume mounts for persistent data and performance
+    volumes:
+      # Database persistence
+      - lyricless_data:/app/data
+      
+      # Temporary files (with size limit)
+      - lyricless_temp:/app/temp
+      
+      # Downloads directory (for user downloads)
+      - lyricless_downloads:/app/downloads
+      
+      # Application logs
+      - lyricless_logs:/app/logs
+      
+      # Cache for performance
+      - lyricless_cache:/app/.next/cache
+      
+      # Shared memory for Chromium (fixes crashes)
+      - /dev/shm:/dev/shm
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    
+    # Capabilities (minimal required for Chromium)
+    cap_add:
+      - SYS_ADMIN  # Required for Chrome sandboxing
+    
+    # Shared memory size for Chromium stability
+    shm_size: 2gb
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/test"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    
+    # Dependencies
+    depends_on:
+      - nginx
+    
+    networks:
+      - lyricless-network
+
+  # ==============================================================================
+  # Nginx Reverse Proxy with Video Streaming Support
+  # ==============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: lyricless-nginx
+    restart: unless-stopped
+    
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    
+    volumes:
+      # Nginx configuration
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      
+      # SSL certificates (if using HTTPS)
+      - nginx_ssl:/etc/nginx/ssl:ro
+      
+      # Logs
+      - nginx_logs:/var/log/nginx
+      
+      # Static files for better performance
+      - lyricless_downloads:/var/www/downloads:ro
+    
+    environment:
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
+      - UPSTREAM_SERVER=lyricless:3000
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    networks:
+      - lyricless-network
+
+  # ==============================================================================
+  # Redis Cache for Rate Limiting and Session Storage (Optional)
+  # ==============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: lyricless-redis
+    restart: unless-stopped
+    profiles: ["cache", "production"]
+    
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    
+    volumes:
+      - redis_data:/data
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    networks:
+      - lyricless-network
+
+  # ==============================================================================
+  # Monitoring with Prometheus (Optional)
+  # ==============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: lyricless-prometheus
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    
+    ports:
+      - "9090:9090"
+    
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    
+    networks:
+      - lyricless-network
+
+  # ==============================================================================
+  # Log Aggregation with Grafana (Optional)
+  # ==============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: lyricless-grafana
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    
+    ports:
+      - "3001:3000"
+    
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    
+    networks:
+      - lyricless-network
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+networks:
+  lyricless-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: lyricless-net
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ==============================================================================
+# Volumes for Persistent Data
+# ==============================================================================
+volumes:
+  # Application data (SQLite database, configs)
+  lyricless_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-./data}
+  
+  # Temporary files (auto-cleaned)
+  lyricless_temp:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=2g
+  
+  # User downloads (persistent)
+  lyricless_downloads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DOWNLOADS_PATH:-./downloads}
+  
+  # Application logs
+  lyricless_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LOGS_PATH:-./logs}
+  
+  # Next.js build cache
+  lyricless_cache:
+    driver: local
+  
+  # Nginx logs
+  nginx_logs:
+    driver: local
+  
+  # SSL certificates
+  nginx_ssl:
+    driver: local
+  
+  # Redis data (if using cache profile)
+  redis_data:
+    driver: local
+  
+  # Monitoring data (if using monitoring profile)
+  prometheus_data:
+    driver: local
+  
+  grafana_data:
+    driver: local

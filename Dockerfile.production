@@ -1,0 +1,190 @@
+# ==============================================================================
+# LYRICLESS - SERVER-SIDE VIDEO DOWNLOADER
+# Multi-stage Production Dockerfile
+# ==============================================================================
+# Optimized for: Next.js 14 + Puppeteer + yt-dlp + FFmpeg + SQLite
+# Security: Non-root user, minimal attack surface, security updates
+
+# Base image with Node.js 20 LTS
+FROM node:20-alpine AS base
+
+# Install security updates and essential tools
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    libc6-compat \
+    dumb-init \
+    curl \
+    ca-certificates
+
+# Set working directory
+WORKDIR /app
+
+# ==============================================================================
+# DEPENDENCIES STAGE - Install system dependencies
+# ==============================================================================
+FROM base AS system-deps
+
+# Install system dependencies for video processing and browser automation
+RUN apk add --no-cache \
+    # Python and pip for yt-dlp
+    python3 \
+    py3-pip \
+    # FFmpeg for video processing
+    ffmpeg \
+    # Chromium and dependencies for Puppeteer
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ttf-freefont \
+    # Additional Chrome dependencies
+    libstdc++ \
+    # Build tools for native dependencies
+    make \
+    g++ \
+    # Git for yt-dlp updates
+    git
+
+# Install yt-dlp with all dependencies
+RUN pip3 install --no-cache-dir --upgrade \
+    yt-dlp[default] \
+    --break-system-packages
+
+# Verify installations
+RUN node --version && \
+    npm --version && \
+    python3 --version && \
+    pip3 --version && \
+    yt-dlp --version && \
+    ffmpeg -version && \
+    chromium --version
+
+# ==============================================================================
+# NODE DEPENDENCIES STAGE - Production dependencies only
+# ==============================================================================
+FROM system-deps AS node-deps
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install production dependencies only
+RUN npm ci --only=production --ignore-scripts && \
+    npm cache clean --force
+
+# ==============================================================================
+# BUILD DEPENDENCIES STAGE - All dependencies for building
+# ==============================================================================
+FROM system-deps AS build-deps
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install all dependencies (including dev dependencies)
+RUN npm ci --ignore-scripts && \
+    npm cache clean --force
+
+# ==============================================================================
+# BUILD STAGE - Build the application
+# ==============================================================================
+FROM build-deps AS builder
+WORKDIR /app
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Set build environment variables
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+# Build Next.js application with standalone output
+RUN npm run build
+
+# ==============================================================================
+# PRODUCTION RUNTIME STAGE
+# ==============================================================================
+FROM system-deps AS runner
+
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 --ingroup nodejs nextjs
+
+WORKDIR /app
+
+# Copy built application from builder stage
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Copy production dependencies
+COPY --from=node-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Copy Prisma schema and generated client
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+
+# Create necessary directories with proper permissions
+RUN mkdir -p \
+    /app/data \
+    /app/temp \
+    /app/downloads \
+    /app/.next/cache \
+    /app/logs && \
+    chown -R nextjs:nodejs \
+    /app/data \
+    /app/temp \
+    /app/downloads \
+    /app/.next/cache \
+    /app/logs
+
+# Set production environment variables
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME="0.0.0.0"
+ENV PORT=3000
+
+# Puppeteer configuration
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Database configuration
+ENV DATABASE_URL="file:/app/data/database.db"
+
+# Video processing configuration
+ENV TEMP_DIR="/app/temp"
+ENV DOWNLOADS_DIR="/app/downloads"
+ENV MAX_VIDEO_SIZE="500MB"
+ENV MAX_CONCURRENT_DOWNLOADS=3
+
+# Security settings
+ENV CHROME_FLAGS="--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-accelerated-2d-canvas,--no-first-run,--no-zygote,--disable-gpu"
+
+# Copy entrypoint script
+COPY --chown=nextjs:nodejs docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Switch to non-root user
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3000/api/test || exit 1
+
+# Labels for better container management
+LABEL maintainer="Lyricless Video Downloader" \
+    version="1.0" \
+    description="Server-side video downloader with Puppeteer, yt-dlp, and FFmpeg"
+
+# Use dumb-init for proper signal handling and PID 1
+ENTRYPOINT ["dumb-init", "--", "/app/docker-entrypoint.sh"]
+CMD ["node", "server.js"]
